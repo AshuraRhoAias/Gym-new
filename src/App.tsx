@@ -9,6 +9,13 @@ import Inscripciones from './pages/Inscripciones'
 import Renovaciones from './pages/Renovaciones'
 import RegistroVisita from './pages/RegistroVisita'
 import CajaVisitas from './pages/CajaVisitas'
+import Scanner from './pages/Scanner'
+import Reportes from './pages/Reportes'
+import PaymentMonitor from './pages/PaymentMonitor'
+import Enum from './pages/Enum'
+import ReporteDia from './pages/ReporteDia'
+import Completos from './pages/Completos'
+import Faltan from './pages/Faltan'
 import ComingSoon from './pages/ComingSoon'
 
 export default function App() {
@@ -30,13 +37,13 @@ export default function App() {
               <Route path="/renovaciones" element={<Renovaciones />} />
               <Route path="/registros-visitas" element={<RegistroVisita />} />
               <Route path="/caja-visitas" element={<CajaVisitas />} />
-              <Route path="/scanner" element={<ComingSoon title="Scanner QR" />} />
-              <Route path="/reportes" element={<ComingSoon title="Reportes del Sistema" />} />
-              <Route path="/payment-monitor" element={<ComingSoon title="Monitor de Pagos" />} />
-              <Route path="/enum" element={<ComingSoon title="Reportes con Enumeración" />} />
-              <Route path="/dia" element={<ComingSoon title="Reporte de Ingresos por Día" />} />
-              <Route path="/completos" element={<ComingSoon title="Registros Completados" />} />
-              <Route path="/faltan" element={<ComingSoon title="Gestión de Documentos Faltantes" />} />
+              <Route path="/scanner" element={<Scanner />} />
+              <Route path="/reportes" element={<Reportes />} />
+              <Route path="/payment-monitor" element={<PaymentMonitor />} />
+              <Route path="/enum" element={<Enum />} />
+              <Route path="/dia" element={<ReporteDia />} />
+              <Route path="/completos" element={<Completos />} />
+              <Route path="/faltan" element={<Faltan />} />
               <Route path="*" element={<ComingSoon title="Página no encontrada" />} />
             </Route>
           </Routes>

@@ -16,9 +16,18 @@ Implementado y funcional:
 - Inscripciones: alta de nuevo registro con checklist de documentos
 - Renovaciones: búsqueda de socio existente y alta de renovación
 - Registro de Visitas + Caja de Visitas (historial e ingresos)
+- Scanner / Check-in: búsqueda por nombre o folio para registrar ingreso (el escaneo QR con
+  cámara queda pendiente)
+- Reportes: estadísticas generales del periodo (bachilleres, faltan doc, tramitar hoja,
+  completados, entregados, pendientes) con listados
+- PaymentMonitor: total recaudado del periodo desglosado por método de pago
+- Reporte por Día (`$ Día`): totales e ingresos detallados de una fecha específica
+- Completos: listado filtrable de registros completados/entregados
+- Faltan: gestión de documentos faltantes por persona
+- Enum: reportes con folio/sin folio y cálculo de saldo (monto − autogenerado)
 
-Pendientes (placeholders "Próximamente" en la navegación): Scanner QR, Reportes, Payment
-Monitor, Enum, Reporte por día, Completos, Documentos faltantes.
+Pendiente: envío masivo de "Hoja Rosa" por WhatsApp (visto en las capturas de referencia) y
+escaneo de QR con cámara — quedan fuera de este MVP.
 
 ## Requisitos
 
