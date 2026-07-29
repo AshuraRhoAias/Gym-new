@@ -4,6 +4,7 @@ import { usePeriod } from '../context/PeriodContext'
 import { usePeriodRegistros } from '../hooks/usePeriodRegistros'
 import PeriodSelector from '../components/PeriodSelector'
 import StatusBadge from '../components/StatusBadge'
+import PhoneReveal from '../components/PhoneReveal'
 import { PAGO_LABEL } from '../types/database'
 
 export default function Completos() {
@@ -93,7 +94,9 @@ export default function Completos() {
                     <td className="px-4 py-2">
                       <StatusBadge status={r.estatus} />
                     </td>
-                    <td className="px-4 py-2 text-gray-400">{r.telefono || '—'}</td>
+                    <td className="px-4 py-2 text-gray-400">
+                      <PhoneReveal cipher={r.telefono} />
+                    </td>
                   </tr>
                 ))}
               </tbody>

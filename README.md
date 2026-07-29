@@ -16,8 +16,8 @@ Implementado y funcional:
 - Inscripciones: alta de nuevo registro con checklist de documentos
 - Renovaciones: búsqueda de socio existente y alta de renovación
 - Registro de Visitas + Caja de Visitas (historial e ingresos)
-- Scanner / Check-in: búsqueda por nombre o folio para registrar ingreso (el escaneo QR con
-  cámara queda pendiente)
+- Scanner / Check-in: sube la imagen de un QR de acceso (o busca por nombre/folio) para ver
+  documentos faltantes, si pagó el mes en curso, su foto, y registrar el ingreso
 - Reportes: estadísticas generales del periodo (bachilleres, faltan doc, tramitar hoja,
   completados, entregados, pendientes) con listados
 - PaymentMonitor: total recaudado del periodo desglosado por método de pago
@@ -25,9 +25,37 @@ Implementado y funcional:
 - Completos: listado filtrable de registros completados/entregados
 - Faltan: gestión de documentos faltantes por persona
 - Enum: reportes con folio/sin folio y cálculo de saldo (monto − autogenerado)
+- Cifrado de campos sensibles (ver sección dedicada abajo) y QR de acceso cifrado por cada
+  inscripción/renovación nueva, con botón para compartirlo por WhatsApp
 
 Pendiente: envío masivo de "Hoja Rosa" por WhatsApp (visto en las capturas de referencia) y
-escaneo de QR con cámara — quedan fuera de este MVP.
+lectura de QR en vivo con cámara (por ahora es por imagen subida) — quedan fuera de este MVP.
+
+## Cifrado de datos sensibles
+
+Teléfono, comentarios y la foto del alumno se cifran con **AES-256-GCM** antes de guardarse:
+
+- Cada valor cifrado tiene su propio **salt** (16 bytes) e **IV** (12 bytes) aleatorios — ningún
+  valor comparte clave efectiva con otro, ni siquiera dos teléfonos iguales producen el mismo
+  ciphertext.
+- La clave maestra se deriva vía HKDF-SHA256 del `SUPABASE_SERVICE_ROLE_KEY` del proyecto (nunca
+  se expone al cliente ni se configura a mano) dentro de la Edge Function `crypto-vault`
+  (`supabase/functions/crypto-vault`). El cliente nunca ve la clave, solo envía/recibe
+  texto plano y ciphertext a través de la función.
+- La función exige explícitamente un usuario autenticado real (`auth.getUser()`), no solo
+  cualquier JWT válido — la publishable key pública por sí sola no autoriza.
+- Teléfono/comentarios se listan como "Mostrar" (descifrado bajo demanda) en vez de mostrarse
+  automáticamente, para no disparar una llamada a la función por cada fila de una tabla.
+- La foto se sube cifrada al bucket privado `fotos` de Supabase Storage; solo se descifra al
+  pulsar "Ver foto" en el detalle del registro o en el Scanner.
+
+**QR de acceso**: al crear una inscripción o renovación se genera un QR que codifica el UUID del
+registro cifrado con el mismo esquema. El Scanner lo descifra al leer la imagen, resuelve el
+registro y muestra si le faltan documentos, si pagó el mes en curso y su foto. El botón "Enviar
+por WhatsApp" abre un chat de WhatsApp (`wa.me`) con el número del socio — WhatsApp no permite
+adjuntar imágenes automáticamente desde un enlace, así que el QR se descarga y se adjunta a mano;
+integrar el envío automático (imagen + plantilla) requeriría credenciales de WhatsApp Business
+Cloud API, que no están configuradas en este proyecto.
 
 ## Requisitos
 

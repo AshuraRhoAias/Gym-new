@@ -1,9 +1,12 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { Camera } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import { usePeriod } from '../context/PeriodContext'
+import { decryptText, encryptText } from '../lib/crypto'
+import { buildQrToken, qrToDataUrl } from '../lib/qr'
 import Modal from './Modal'
+import EncryptedPhotoField, { type FotoRef } from './EncryptedPhotoField'
+import QrShareCard from './QrShareCard'
 import {
   DOCUMENTOS_REQUERIDOS,
   MESES,
@@ -70,9 +73,10 @@ export default function RegistroForm({ kind, initial, prefill, onClose, onSaved,
         estatus: initial.estatus,
         horario: initial.horario ?? '',
         fecha_ingreso: initial.fecha_ingreso ? initial.fecha_ingreso.slice(0, 16) : '',
-        telefono: initial.telefono ?? '',
+        // Se descifran de forma asíncrona en el useEffect de abajo.
+        telefono: '',
         bachillerato: initial.bachillerato,
-        comentarios: initial.comentarios ?? '',
+        comentarios: '',
       }
     }
     return {
@@ -85,8 +89,17 @@ export default function RegistroForm({ kind, initial, prefill, onClose, onSaved,
   const [docs, setDocs] = useState<Record<string, boolean>>(() =>
     Object.fromEntries(DOCUMENTOS_REQUERIDOS.map((d) => [d, false])),
   )
+  const [fotoRef, setFotoRef] = useState<FotoRef | null>(
+    initial?.foto_path && initial.foto_iv && initial.foto_salt
+      ? { path: initial.foto_path, iv: initial.foto_iv, salt: initial.foto_salt }
+      : null,
+  )
   const [saving, setSaving] = useState(false)
+  const [decrypting, setDecrypting] = useState(!!initial)
   const [error, setError] = useState<string | null>(null)
+  const [qrPanel, setQrPanel] = useState<{ nombre: string; dataUrl: string; telefono: string | null } | null>(
+    null,
+  )
 
   useEffect(() => {
     if (!initial) return
@@ -104,6 +117,24 @@ export default function RegistroForm({ kind, initial, prefill, onClose, onSaved,
       })
   }, [initial])
 
+  useEffect(() => {
+    if (!initial) return
+    let active = true
+    setDecrypting(true)
+    Promise.all([decryptText(initial.telefono), decryptText(initial.comentarios)])
+      .then(([telefono, comentarios]) => {
+        if (!active) return
+        setForm((f) => ({ ...f, telefono, comentarios }))
+      })
+      .catch(() => setError('No se pudieron descifrar algunos campos'))
+      .finally(() => {
+        if (active) setDecrypting(false)
+      })
+    return () => {
+      active = false
+    }
+  }, [initial])
+
   const faltantes = DOCUMENTOS_REQUERIDOS.filter((d) => !docs[d]).length
 
   const update = <K extends keyof FormState>(key: K, value: FormState[K]) =>
@@ -118,6 +149,19 @@ export default function RegistroForm({ kind, initial, prefill, onClose, onSaved,
     setSaving(true)
     setError(null)
 
+    let telefonoCifrado: string | null = null
+    let comentariosCifrado: string | null = null
+    try {
+      ;[telefonoCifrado, comentariosCifrado] = await Promise.all([
+        form.telefono.trim() ? encryptText(form.telefono.trim()) : Promise.resolve(null),
+        form.comentarios.trim() ? encryptText(form.comentarios.trim()) : Promise.resolve(null),
+      ])
+    } catch {
+      setError('No se pudieron cifrar los datos. Intenta de nuevo.')
+      setSaving(false)
+      return
+    }
+
     const payload = {
       kind,
       nombre: form.nombre.trim(),
@@ -129,9 +173,12 @@ export default function RegistroForm({ kind, initial, prefill, onClose, onSaved,
       estatus: form.estatus,
       horario: form.horario.trim() || null,
       fecha_ingreso: form.fecha_ingreso ? new Date(form.fecha_ingreso).toISOString() : null,
-      telefono: form.telefono.trim() || null,
+      telefono: telefonoCifrado,
       bachillerato: form.bachillerato,
-      comentarios: form.comentarios.trim() || null,
+      comentarios: comentariosCifrado,
+      foto_path: fotoRef?.path ?? null,
+      foto_iv: fotoRef?.iv ?? null,
+      foto_salt: fotoRef?.salt ?? null,
       atendido_por: initial?.atendido_por ?? username,
     }
 
@@ -163,7 +210,39 @@ export default function RegistroForm({ kind, initial, prefill, onClose, onSaved,
     }
 
     setSaving(false)
+
+    // Al crear (no al editar) una inscripción/renovación se genera un QR de
+    // acceso cifrado en vez de continuar de inmediato.
+    if (!initial && registroId) {
+      try {
+        const token = await buildQrToken(registroId)
+        const dataUrl = await qrToDataUrl(token)
+        setQrPanel({ nombre: form.nombre.trim(), dataUrl, telefono: form.telefono.trim() || null })
+        return
+      } catch {
+        // Si falla la generación del QR no bloqueamos el flujo de guardado.
+      }
+    }
     onSaved()
+  }
+
+  if (qrPanel) {
+    const panel = (
+      <QrShareCard
+        nombre={qrPanel.nombre}
+        dataUrl={qrPanel.dataUrl}
+        telefono={qrPanel.telefono}
+        onContinue={() => {
+          setQrPanel(null)
+          onSaved()
+        }}
+      />
+    )
+    return inline ? panel : (
+      <Modal title="Código QR generado" onClose={() => { setQrPanel(null); onSaved() }} wide>
+        {panel}
+      </Modal>
+    )
   }
 
   const content = (
@@ -231,7 +310,7 @@ export default function RegistroForm({ kind, initial, prefill, onClose, onSaved,
           onChange={(v) => update('fecha_ingreso', v)}
         />
         <TextField
-          label="Número Telefónico"
+          label="Número Telefónico (se cifra al guardar)"
           value={form.telefono}
           onChange={(v) => update('telefono', v)}
           placeholder="Ej: +52 123 456 7890"
@@ -247,6 +326,17 @@ export default function RegistroForm({ kind, initial, prefill, onClose, onSaved,
         />
         ¿Es bachillerato?
       </label>
+
+      <div>
+        <label className="block text-xs text-gray-400 mb-1.5">Comentarios (se cifran al guardar)</label>
+        <textarea
+          value={form.comentarios}
+          onChange={(e) => update('comentarios', e.target.value)}
+          placeholder="Información adicional…"
+          rows={3}
+          className="w-full bg-surface-2 border border-border rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:border-accent resize-none"
+        />
+      </div>
 
       <div className="bg-surface-2 border border-border rounded-lg p-4">
         <div className="flex items-center justify-between mb-1">
@@ -279,10 +369,7 @@ export default function RegistroForm({ kind, initial, prefill, onClose, onSaved,
 
       <div>
         <label className="block text-xs text-gray-400 mb-1.5">Foto del alumno</label>
-        <div className="w-24 h-24 border border-dashed border-border rounded-lg flex flex-col items-center justify-center gap-1 text-gray-500 cursor-pointer hover:border-accent/50">
-          <Camera size={18} />
-          <span className="text-[10px] text-center leading-tight px-1">Haz clic para subir foto</span>
-        </div>
+        <EncryptedPhotoField value={fotoRef} onChange={setFotoRef} />
       </div>
 
       {error && (
@@ -301,10 +388,10 @@ export default function RegistroForm({ kind, initial, prefill, onClose, onSaved,
         )}
         <button
           type="submit"
-          disabled={saving}
+          disabled={saving || decrypting}
           className="px-4 py-2 text-sm rounded-lg bg-accent hover:bg-accent-dark disabled:opacity-60 text-black font-medium"
         >
-          {saving ? 'Guardando…' : initial ? 'Guardar cambios' : 'Guardar Inscripción'}
+          {decrypting ? 'Descifrando…' : saving ? 'Guardando…' : initial ? 'Guardar cambios' : 'Guardar Inscripción'}
         </button>
       </div>
     </form>
