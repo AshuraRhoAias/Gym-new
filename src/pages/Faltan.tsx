@@ -3,6 +3,7 @@ import { ClipboardList } from 'lucide-react'
 import { usePeriod } from '../context/PeriodContext'
 import { supabase } from '../lib/supabase'
 import PeriodSelector from '../components/PeriodSelector'
+import PhoneReveal from '../components/PhoneReveal'
 import type { Registro } from '../types/database'
 
 interface RegistroConFaltantes extends Registro {
@@ -102,7 +103,9 @@ export default function Faltan() {
               <div>
                 <h3 className="text-white font-medium">{r.nombre}</h3>
                 <div className="text-xs text-gray-500 flex flex-wrap gap-3 mt-1">
-                  <span>📞 {r.telefono || '—'}</span>
+                  <span className="flex items-center gap-1">
+                    📞 <PhoneReveal cipher={r.telefono} />
+                  </span>
                   <span>{r.mes}</span>
                   <span>Folio: {r.folio || '0'}</span>
                 </div>

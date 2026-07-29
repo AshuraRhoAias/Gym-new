@@ -50,6 +50,9 @@ export interface Registro {
   atendido_por: string | null
   comentarios: string | null
   foto_url: string | null
+  foto_path: string | null
+  foto_iv: string | null
+  foto_salt: string | null
   created_at: string
   updated_at: string
 }

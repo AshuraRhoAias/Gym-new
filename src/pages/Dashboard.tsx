@@ -1,14 +1,46 @@
 import { useEffect, useMemo, useState } from 'react'
-import { FileText, RefreshCw, Eye, Pencil } from 'lucide-react'
+import { FileText, RefreshCw, Eye, Pencil, Loader2 } from 'lucide-react'
 import { usePeriod } from '../context/PeriodContext'
 import { supabase } from '../lib/supabase'
+import { decryptText } from '../lib/crypto'
 import PeriodSelector from '../components/PeriodSelector'
 import StatCard from '../components/StatCard'
 import StatusBadge from '../components/StatusBadge'
 import Modal from '../components/Modal'
 import RegistroForm from '../components/RegistroForm'
+import EncryptedPhotoViewer from '../components/EncryptedPhotoViewer'
 import { useRegistros } from '../hooks/useRegistros'
 import { PAGO_LABEL, type Registro, type RecordKind } from '../types/database'
+
+function DecryptedField({ label, cipher }: { label: string; cipher: string | null }) {
+  const [value, setValue] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
+
+  if (!cipher) return <Field label={label} value="—" />
+
+  if (value !== null) return <Field label={label} value={value} />
+
+  return (
+    <div>
+      <dt className="text-gray-500 text-xs mb-0.5">{label}</dt>
+      <dd>
+        <button
+          type="button"
+          disabled={loading}
+          onClick={async () => {
+            setLoading(true)
+            setValue(await decryptText(cipher))
+            setLoading(false)
+          }}
+          className="flex items-center gap-1.5 text-xs bg-surface-2 border border-border rounded-md px-2 py-1 text-gray-300 hover:border-accent/50"
+        >
+          {loading ? <Loader2 size={12} className="animate-spin" /> : null}
+          {loading ? 'Descifrando…' : 'Mostrar'}
+        </button>
+      </dd>
+    </div>
+  )
+}
 
 const TABS: { key: RecordKind; label: string }[] = [
   { key: 'inscripcion', label: 'Inscripción' },
@@ -186,7 +218,7 @@ export default function Dashboard() {
             <Field label="Monto" value={`$${detail.monto.toFixed(2)}`} />
             <Field label="Atendido por" value={detail.atendido_por || '—'} />
             <Field label="Horario" value={detail.horario || '—'} />
-            <Field label="Teléfono" value={detail.telefono || '—'} />
+            <DecryptedField label="Teléfono" cipher={detail.telefono} />
             <Field
               label="Fecha de ingreso"
               value={detail.fecha_ingreso ? new Date(detail.fecha_ingreso).toLocaleString() : '—'}
@@ -194,8 +226,14 @@ export default function Dashboard() {
           </dl>
           {detail.comentarios && (
             <div className="mt-4 pt-4 border-t border-border text-sm text-gray-300">
-              <span className="text-gray-500">Comentarios: </span>
-              {detail.comentarios}
+              <span className="text-gray-500 block text-xs mb-1">Comentarios (cifrados):</span>
+              <DecryptedComentarios cipher={detail.comentarios} />
+            </div>
+          )}
+          {detail.foto_path && detail.foto_iv && detail.foto_salt && (
+            <div className="mt-4 pt-4 border-t border-border">
+              <span className="text-gray-500 block text-xs mb-2">Foto del alumno (cifrada):</span>
+              <EncryptedPhotoViewer path={detail.foto_path} iv={detail.foto_iv} salt={detail.foto_salt} />
             </div>
           )}
         </Modal>
@@ -213,6 +251,29 @@ export default function Dashboard() {
         />
       )}
     </div>
+  )
+}
+
+function DecryptedComentarios({ cipher }: { cipher: string }) {
+  const [value, setValue] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
+
+  if (value !== null) return <p>{value}</p>
+
+  return (
+    <button
+      type="button"
+      disabled={loading}
+      onClick={async () => {
+        setLoading(true)
+        setValue(await decryptText(cipher))
+        setLoading(false)
+      }}
+      className="flex items-center gap-1.5 text-xs bg-surface-2 border border-border rounded-md px-2 py-1 text-gray-300 hover:border-accent/50"
+    >
+      {loading ? <Loader2 size={12} className="animate-spin" /> : null}
+      {loading ? 'Descifrando…' : 'Mostrar comentarios'}
+    </button>
   )
 }
 
