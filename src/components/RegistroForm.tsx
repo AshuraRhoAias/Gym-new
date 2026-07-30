@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext'
 import { usePeriod } from '../context/PeriodContext'
 import { decryptText, encryptText } from '../lib/crypto'
 import { buildQrToken, qrToDataUrl } from '../lib/qr'
+import { canSeeMoney } from '../lib/permissions'
 import Modal from './Modal'
 import EncryptedPhotoField, { type FotoRef } from './EncryptedPhotoField'
 import QrShareCard from './QrShareCard'
@@ -59,7 +60,8 @@ const emptyState = (mes: string, anio: number): FormState => ({
 })
 
 export default function RegistroForm({ kind, initial, prefill, onClose, onSaved, inline }: RegistroFormProps) {
-  const { username } = useAuth()
+  const { username, role } = useAuth()
+  const moneyVisible = canSeeMoney(role)
   const { mes, anio } = usePeriod()
   const [form, setForm] = useState<FormState>(() => {
     if (initial) {
@@ -162,14 +164,13 @@ export default function RegistroForm({ kind, initial, prefill, onClose, onSaved,
       return
     }
 
-    const payload = {
+    const payload: Record<string, unknown> = {
       kind,
       nombre: form.nombre.trim(),
       folio: form.folio.trim() || '0',
       mes: form.mes,
       anio: form.anio,
       forma_pago: form.forma_pago,
-      monto: Number(form.monto) || 0,
       estatus: form.estatus,
       horario: form.horario.trim() || null,
       fecha_ingreso: form.fecha_ingreso ? new Date(form.fecha_ingreso).toISOString() : null,
@@ -180,6 +181,15 @@ export default function RegistroForm({ kind, initial, prefill, onClose, onSaved,
       foto_iv: fotoRef?.iv ?? null,
       foto_salt: fotoRef?.salt ?? null,
       atendido_por: initial?.atendido_por ?? username,
+    }
+
+    // Un rol sin permiso para ver montos tampoco los transmite: al editar se
+    // omite la clave (se conserva el valor existente); al crear se guarda 0
+    // y queda pendiente de que un admin/superadmin lo capture.
+    if (moneyVisible) {
+      payload.monto = Number(form.monto) || 0
+    } else if (!initial) {
+      payload.monto = 0
     }
 
     let registroId = initial?.id
@@ -285,7 +295,9 @@ export default function RegistroForm({ kind, initial, prefill, onClose, onSaved,
             <option value="otro">Otro</option>
           </select>
         </div>
-        <TextField label="Monto" type="number" value={form.monto} onChange={(v) => update('monto', v)} placeholder="Ingrese el monto" />
+        {moneyVisible && (
+          <TextField label="Monto" type="number" value={form.monto} onChange={(v) => update('monto', v)} placeholder="Ingrese el monto" />
+        )}
 
         <div>
           <label className="block text-xs text-gray-400 mb-1.5">Estatus</label>

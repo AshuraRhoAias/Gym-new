@@ -17,7 +17,7 @@ export default function PaymentMonitor() {
 
   const totals = useMemo(() => {
     const byMethod: Record<string, number> = { tarjeta: 0, efectivo: 0, transferencia: 0, otro: 0, sin_metodo: 0 }
-    for (const r of data) byMethod[r.forma_pago] = (byMethod[r.forma_pago] ?? 0) + r.monto
+    for (const r of data) byMethod[r.forma_pago] = (byMethod[r.forma_pago] ?? 0) + (r.monto ?? 0)
     const total = Object.values(byMethod).reduce((s, v) => s + v, 0)
     return { byMethod, total }
   }, [data])

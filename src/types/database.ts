@@ -40,8 +40,9 @@ export interface Registro {
   mes: string
   anio: number
   forma_pago: PaymentMethod
-  monto: number
-  autogenerado: number
+  /** Null cuando el rol actual (editor/viewer) no tiene permiso de ver montos (ver registros_view). */
+  monto: number | null
+  autogenerado: number | null
   estatus: RecordStatus
   horario: string | null
   fecha_ingreso: string | null
@@ -62,6 +63,27 @@ export interface DocumentoEntregado {
   registro_id: string
   documento: string
   entregado: boolean
+}
+
+export interface AuditLogEntry {
+  id: string
+  tabla: string
+  registro_id: string
+  accion: 'update' | 'delete'
+  campo: string | null
+  valor_anterior: string | null
+  valor_nuevo: string | null
+  usuario_id: string | null
+  usuario: string | null
+  created_at: string
+}
+
+export interface Profile {
+  id: string
+  username: string
+  role: 'superadmin' | 'admin' | 'editor' | 'viewer'
+  created_by: string | null
+  created_at: string
 }
 
 export interface CajaMovimiento {

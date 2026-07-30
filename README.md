@@ -27,9 +27,49 @@ Implementado y funcional:
 - Enum: reportes con folio/sin folio y cálculo de saldo (monto − autogenerado)
 - Cifrado de campos sensibles (ver sección dedicada abajo) y QR de acceso cifrado por cada
   inscripción/renovación nueva, con botón para compartirlo por WhatsApp
+- Roles y permisos (superadmin/admin/editor/viewer), auditoría de cambios y gestión de cuentas
+  (ver sección dedicada abajo)
 
 Pendiente: envío masivo de "Hoja Rosa" por WhatsApp (visto en las capturas de referencia) y
 lectura de QR en vivo con cámara (por ahora es por imagen subida) — quedan fuera de este MVP.
+
+## Roles, permisos y auditoría
+
+Cuatro roles, todos gestionados desde la tabla `profiles` (1 fila por usuario de Auth):
+
+| Rol | Ve | Edita/crea | Borra | Ve montos | Crea cuentas |
+|---|---|---|---|---|---|
+| **Superadministrador** (`bernal`) | Todo | Todo, incluida caja | Sí | Sí | Sí |
+| **Administrador** | Todo | Todo | No | Sí | No |
+| **Editor** | Todo excepto secciones de dinero (Registros Visitas, Caja Visitas, PaymentMonitor, `$ Día`, Enum) — Dashboard es la excepción | Sí (sin montos) | No | No (montos ocultos incluso en Dashboard) | No |
+| **Visualizador** | Solo Dashboard y Enum (Enum solo nombre/folio) | No, solo lectura | No | No | No |
+
+- Solo `bernal` (superadministrador) puede crear cuentas nuevas, desde **Usuarios** en la barra de
+  navegación (solo visible para él). Internamente llama a la Edge Function
+  `admin-create-user`, que verifica el rol del que llama antes de crear el usuario en Auth —
+  no se puede crear otro superadministrador desde ahí a propósito.
+- El enmascarado de montos es real a nivel de base de datos, no solo visual: el frontend lee los
+  registros a través de la vista `registros_view`, que devuelve `monto`/`autogenerado` como
+  `null` para editor/viewer (evaluado con una función `security definer` que consulta el rol del
+  usuario autenticado). La tabla `caja_movimientos` tiene su propia política RLS que bloquea
+  por completo a editor/viewer a nivel de base de datos (no solo se oculta en el menú).
+- Solo el superadministrador puede borrar registros (política RLS `delete` restringida a su rol);
+  el resto de roles no tiene ni el botón ni el permiso en la base de datos.
+- **Auditoría**: cada `UPDATE`/`DELETE` en `registros` hecho por alguien que no sea
+  superadministrador se registra campo por campo (valor anterior y nuevo) en la tabla
+  `audit_log` vía trigger. Las acciones del superadministrador (incluida edición de fechas o
+  borrado) **no dejan rastro**, por diseño explícito. Solo el superadministrador puede leer
+  `audit_log`, desde **Auditoría** en la navegación. El nombre de quien atendió cada
+  inscripción/renovación/movimiento de caja siempre queda en el propio registro (`atendido_por` /
+  `usuario`), independientemente de la auditoría.
+
+Limitación conocida: el enmascarado de montos protege el flujo normal de la app (vista +
+políticas RLS de escritura), pero la tabla base `registros` mantiene `SELECT` abierto a
+cualquier cuenta autenticada para que las operaciones de escritura (insert/update)
+sigan funcionando; un usuario técnico que llame directamente a la API REST sobre `registros` (en
+vez de `registros_view`) podría obtener el monto igualmente. Cerrar ese último resquicio requiere
+revocar el `SELECT` de la tabla base para roles no elevados, lo cual no se hizo en esta pasada
+para no arriesgar romper las operaciones de escritura sin poder probarlo en este entorno.
 
 ## Cifrado de datos sensibles
 
