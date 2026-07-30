@@ -2,7 +2,7 @@
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "GymTech",
   "version": "0.1.0",
-  "identifier": "com.gymtech.app",
+  "identifier": "com.gymtech.desktop",
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:1420",
