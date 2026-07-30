@@ -11,7 +11,7 @@ export function usePeriodRegistros(mes: string, anio: number) {
   const refresh = useCallback(async () => {
     setLoading(true)
     const { data: rows, error: err } = await supabase
-      .from('registros')
+      .from('registros_view')
       .select('*')
       .eq('mes', mes)
       .eq('anio', anio)

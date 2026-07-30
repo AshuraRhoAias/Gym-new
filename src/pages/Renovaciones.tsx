@@ -26,7 +26,7 @@ export default function Renovaciones() {
       // El teléfono está cifrado y ya no es buscable por texto; se busca solo
       // por nombre o folio.
       const { data } = await supabase
-        .from('registros')
+        .from('registros_view')
         .select('*')
         .or(`nombre.ilike.%${q}%,folio.ilike.%${q}%`)
         .limit(8)
@@ -83,7 +83,9 @@ export default function Renovaciones() {
                     <span className="font-medium text-white">{r.nombre}</span>
                     <span className="text-xs text-gray-400">Folio: {r.folio || '0'}</span>
                   </div>
-                  <div className="text-xs text-gray-400 mt-1">Monto: ${r.monto.toFixed(2)}</div>
+                  <div className="text-xs text-gray-400 mt-1">
+                    Monto: {r.monto === null ? 'Oculto' : `$${r.monto.toFixed(2)}`}
+                  </div>
                 </button>
               ))}
             </div>

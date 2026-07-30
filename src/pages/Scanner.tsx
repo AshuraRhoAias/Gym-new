@@ -54,7 +54,7 @@ export default function Scanner() {
     }
     setSearching(true)
     const { data } = await supabase
-      .from('registros')
+      .from('registros_view')
       .select('*')
       .or(`nombre.ilike.%${q}%,folio.ilike.%${q}%`)
       .limit(6)
@@ -93,7 +93,7 @@ export default function Scanner() {
       if (!registroId) throw new Error('El QR no es válido o no se pudo descifrar')
 
       const { data: registro, error: fetchErr } = await supabase
-        .from('registros')
+        .from('registros_view')
         .select('*')
         .eq('id', registroId)
         .single()

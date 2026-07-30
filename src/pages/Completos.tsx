@@ -23,7 +23,8 @@ export default function Completos() {
     return completos.filter((r) => r.nombre.toLowerCase().includes(q) || (r.folio ?? '').toLowerCase().includes(q))
   }, [completos, search])
 
-  const montoTotal = useMemo(() => completos.reduce((s, r) => s + r.monto, 0), [completos])
+  const montoOculto = completos.some((r) => r.monto === null)
+  const montoTotal = useMemo(() => completos.reduce((s, r) => s + (r.monto ?? 0), 0), [completos])
 
   return (
     <div className="flex flex-col gap-6">
@@ -50,7 +51,9 @@ export default function Completos() {
           <div className="text-xs text-gray-500 mt-1">Renovaciones</div>
         </div>
         <div className="bg-surface border border-border rounded-xl p-4 text-center">
-          <div className="text-3xl font-bold text-white">${montoTotal.toFixed(2)}</div>
+          <div className="text-3xl font-bold text-white">
+            {montoOculto ? 'Oculto' : `$${montoTotal.toFixed(2)}`}
+          </div>
           <div className="text-xs text-gray-500 mt-1">Monto Total</div>
         </div>
       </div>
@@ -90,7 +93,9 @@ export default function Completos() {
                     <td className="px-4 py-2 text-white">{r.nombre}</td>
                     <td className="px-4 py-2 text-gray-300">{r.folio || '0'}</td>
                     <td className="px-4 py-2 text-gray-300">{PAGO_LABEL[r.forma_pago]}</td>
-                    <td className="px-4 py-2 text-gray-200">${r.monto.toFixed(2)}</td>
+                    <td className="px-4 py-2 text-gray-200">
+                      {r.monto === null ? <span className="text-gray-600">Oculto</span> : `$${r.monto.toFixed(2)}`}
+                    </td>
                     <td className="px-4 py-2">
                       <StatusBadge status={r.estatus} />
                     </td>

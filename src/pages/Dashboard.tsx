@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
-import { FileText, RefreshCw, Eye, Pencil, Loader2 } from 'lucide-react'
+import { FileText, RefreshCw, Eye, Pencil, Loader2, Trash2 } from 'lucide-react'
 import { usePeriod } from '../context/PeriodContext'
+import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import { decryptText } from '../lib/crypto'
+import { canDelete } from '../lib/permissions'
 import PeriodSelector from '../components/PeriodSelector'
 import StatCard from '../components/StatCard'
 import StatusBadge from '../components/StatusBadge'
@@ -71,12 +73,22 @@ function useCount(kind: RecordKind, mes: string, anio: number) {
 
 export default function Dashboard() {
   const { mes, anio } = usePeriod()
+  const { role } = useAuth()
   const [tab, setTab] = useState<RecordKind>('inscripcion')
   const [search, setSearch] = useState('')
   const [detail, setDetail] = useState<Registro | null>(null)
   const [editing, setEditing] = useState<Registro | null>(null)
+  const [deleting, setDeleting] = useState<string | null>(null)
 
   const { data, loading, refresh } = useRegistros(tab, mes, anio)
+
+  const handleDelete = async (r: Registro) => {
+    if (!confirm(`¿Borrar el registro de "${r.nombre}"? Esta acción no se puede deshacer.`)) return
+    setDeleting(r.id)
+    await supabase.from('registros').delete().eq('id', r.id)
+    setDeleting(null)
+    refresh()
+  }
 
   const countInscripcion = useCount('inscripcion', mes, anio)
   const countRenovacion = useCount('renovacion', mes, anio)
@@ -191,13 +203,25 @@ export default function Dashboard() {
                       >
                         <Eye size={16} />
                       </button>
-                      <button
-                        onClick={() => setEditing(r)}
-                        className="text-gray-400 hover:text-accent"
-                        title="Editar"
-                      >
-                        <Pencil size={16} />
-                      </button>
+                      {role !== 'viewer' && (
+                        <button
+                          onClick={() => setEditing(r)}
+                          className="text-gray-400 hover:text-accent"
+                          title="Editar"
+                        >
+                          <Pencil size={16} />
+                        </button>
+                      )}
+                      {canDelete(role) && (
+                        <button
+                          onClick={() => handleDelete(r)}
+                          disabled={deleting === r.id}
+                          className="text-gray-400 hover:text-danger disabled:opacity-50"
+                          title="Borrar"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -215,7 +239,7 @@ export default function Dashboard() {
             <Field label="Mes" value={detail.mes} />
             <Field label="Estatus" value={<StatusBadge status={detail.estatus} />} />
             <Field label="Forma de pago" value={PAGO_LABEL[detail.forma_pago]} />
-            <Field label="Monto" value={`$${detail.monto.toFixed(2)}`} />
+            <Field label="Monto" value={detail.monto === null ? 'Oculto para tu rol' : `$${detail.monto.toFixed(2)}`} />
             <Field label="Atendido por" value={detail.atendido_por || '—'} />
             <Field label="Horario" value={detail.horario || '—'} />
             <DecryptedField label="Teléfono" cipher={detail.telefono} />

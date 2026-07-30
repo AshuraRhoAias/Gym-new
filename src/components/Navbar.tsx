@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { NavLink } from 'react-router-dom'
 import { Dumbbell, User, LogOut, Menu, X } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
+import { isRouteAllowed, ROLE_LABEL } from '../lib/permissions'
 
 const LINKS = [
   { to: '/', label: 'Dashboard' },
@@ -16,12 +17,16 @@ const LINKS = [
   { to: '/dia', label: '$ Día' },
   { to: '/completos', label: 'Completos' },
   { to: '/faltan', label: 'Faltan' },
+  { to: '/usuarios', label: 'Usuarios' },
+  { to: '/auditoria', label: 'Auditoría' },
 ]
 
 export default function Navbar() {
-  const { username, signOut } = useAuth()
+  const { username, role, signOut } = useAuth()
   const [open, setOpen] = useState(false)
   const [userMenu, setUserMenu] = useState(false)
+
+  const links = useMemo(() => LINKS.filter((link) => isRouteAllowed(role, link.to)), [role])
 
   return (
     <header className="sticky top-0 z-40 bg-bg border-b border-accent/40">
@@ -32,7 +37,7 @@ export default function Navbar() {
         </div>
 
         <nav className="hidden lg:flex items-center gap-1 overflow-x-auto no-scrollbar">
-          {LINKS.map((link) => (
+          {links.map((link) => (
             <NavLink
               key={link.to}
               to={link.to}
@@ -58,9 +63,13 @@ export default function Navbar() {
             >
               <User size={14} />
               {username ?? 'Usuario'}
+              {role && <span className="hidden sm:inline text-xs text-gray-500">· {ROLE_LABEL[role]}</span>}
             </button>
             {userMenu && (
-              <div className="absolute right-0 mt-1 w-40 bg-surface border border-border rounded-lg shadow-xl overflow-hidden">
+              <div className="absolute right-0 mt-1 w-44 bg-surface border border-border rounded-lg shadow-xl overflow-hidden">
+                {role && (
+                  <div className="px-3 py-2 text-xs text-gray-500 border-b border-border">{ROLE_LABEL[role]}</div>
+                )}
                 <button
                   onClick={() => {
                     setUserMenu(false)
@@ -85,7 +94,7 @@ export default function Navbar() {
 
       {open && (
         <nav className="lg:hidden flex flex-col border-t border-border px-2 py-2">
-          {LINKS.map((link) => (
+          {links.map((link) => (
             <NavLink
               key={link.to}
               to={link.to}

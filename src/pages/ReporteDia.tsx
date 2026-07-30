@@ -36,7 +36,7 @@ export default function ReporteDia() {
     const renovaciones = registros.filter((r) => r.kind === 'renovacion' || r.kind === 'renovacion_bacho')
     const usuarios = new Set(registros.map((r) => r.atendido_por).filter(Boolean))
     const byMethod: Record<string, number> = { efectivo: 0, tarjeta: 0, transferencia: 0, otro: 0, sin_metodo: 0 }
-    for (const r of registros) byMethod[r.forma_pago] = (byMethod[r.forma_pago] ?? 0) + r.monto
+    for (const r of registros) byMethod[r.forma_pago] = (byMethod[r.forma_pago] ?? 0) + (r.monto ?? 0)
     const total = Object.values(byMethod).reduce((s, v) => s + v, 0)
     return { inscripciones, renovaciones, usuarios: usuarios.size, byMethod, total }
   }, [registros])
@@ -133,7 +133,7 @@ export default function ReporteDia() {
                         </td>
                         <td className="px-4 py-2 text-white">{r.nombre}</td>
                         <td className="px-4 py-2 text-gray-300">{PAGO_LABEL[r.forma_pago]}</td>
-                        <td className="px-4 py-2 text-gray-200">${r.monto.toFixed(2)}</td>
+                        <td className="px-4 py-2 text-gray-200">${(r.monto ?? 0).toFixed(2)}</td>
                         <td className="px-4 py-2 text-gray-400">{r.atendido_por || '—'}</td>
                         <td className="px-4 py-2 text-gray-400 whitespace-nowrap">
                           {r.fecha_ingreso ? new Date(r.fecha_ingreso).toLocaleTimeString() : '—'}
