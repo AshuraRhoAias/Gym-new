@@ -105,6 +105,10 @@ Cloud API, que no están configuradas en este proyecto.
 - Para iOS: macOS con Xcode y una cuenta de desarrollador Apple
 - Para desktop Linux: `webkit2gtk`, `libayatana-appindicator3` (ver
   [prerequisitos de Tauri](https://tauri.app/start/prerequisites/))
+- Para desktop Windows: **Build Tools for Visual Studio** con el workload "Desktop development
+  with C++" (instala el linker `link.exe` que Rust necesita). Sin esto, `npm run tauri:build`
+  falla con `error: linker \`link.exe\` not found`. Descarga:
+  https://visualstudio.microsoft.com/visual-cpp-build-tools/
 
 ## Configuración
 
