@@ -65,6 +65,38 @@ export interface DocumentoEntregado {
   entregado: boolean
 }
 
+export interface DocumentoArchivo {
+  id: string
+  registro_id: string
+  documento: string
+  file_path: string
+  file_iv: string
+  file_salt: string
+  mime_type: string
+  uploaded_by: string | null
+  created_at: string
+}
+
+export type DocumentoFirmableTipo = 'cedula_inscripcion' | 'carta_responsiva' | 'reglamento'
+
+export interface Firma {
+  id: string
+  registro_id: string
+  tipo: DocumentoFirmableTipo
+  nombre_firmante: string
+  firma_path: string
+  firma_iv: string
+  firma_salt: string
+  firmado_por: string | null
+  created_at: string
+}
+
+export const DOCUMENTO_FIRMABLE_LABEL: Record<DocumentoFirmableTipo, string> = {
+  cedula_inscripcion: 'Cédula de Inscripción',
+  carta_responsiva: 'Carta Responsiva',
+  reglamento: 'Reglamento',
+}
+
 export interface AuditLogEntry {
   id: string
   tabla: string
