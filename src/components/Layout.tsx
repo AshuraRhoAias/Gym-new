@@ -1,5 +1,6 @@
 import { Outlet } from 'react-router-dom'
 import Navbar from './Navbar'
+import GlobalFolioSearch from './GlobalFolioSearch'
 
 export default function Layout() {
   return (
@@ -8,6 +9,7 @@ export default function Layout() {
       <main className="max-w-[1600px] mx-auto px-4 py-6">
         <Outlet />
       </main>
+      <GlobalFolioSearch />
     </div>
   )
 }

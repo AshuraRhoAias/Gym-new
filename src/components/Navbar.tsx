@@ -17,6 +17,7 @@ const LINKS = [
   { to: '/dia', label: '$ Día' },
   { to: '/completos', label: 'Completos' },
   { to: '/faltan', label: 'Faltan' },
+  { to: '/nomina', label: 'Nómina' },
   { to: '/usuarios', label: 'Usuarios' },
   { to: '/auditoria', label: 'Auditoría' },
 ]
