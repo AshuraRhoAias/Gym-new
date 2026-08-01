@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { CalendarDays, Search } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { PAGO_LABEL, type Registro } from '../types/database'
+import Masked from '../components/Masked'
 
 function todayInput() {
   return new Date().toISOString().slice(0, 10)
@@ -131,7 +132,9 @@ export default function ReporteDia() {
                             {r.kind.startsWith('inscripcion') ? 'Inscripción' : 'Renovación'}
                           </span>
                         </td>
-                        <td className="px-4 py-2 text-white">{r.nombre}</td>
+                        <td className="px-4 py-2 text-white">
+                          <Masked folio={r.folio} value={r.nombre} />
+                        </td>
                         <td className="px-4 py-2 text-gray-300">{PAGO_LABEL[r.forma_pago]}</td>
                         <td className="px-4 py-2 text-gray-200">${(r.monto ?? 0).toFixed(2)}</td>
                         <td className="px-4 py-2 text-gray-400">{r.atendido_por || '—'}</td>

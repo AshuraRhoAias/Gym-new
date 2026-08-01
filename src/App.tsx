@@ -2,6 +2,7 @@ import { lazy, Suspense, type ReactNode } from 'react'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
 import { PeriodProvider } from './context/PeriodContext'
+import { PrivacyProvider } from './context/PrivacyContext'
 import ProtectedRoute from './components/ProtectedRoute'
 import RoleRoute from './components/RoleRoute'
 import Layout from './components/Layout'
@@ -42,42 +43,44 @@ export default function App() {
   return (
     <AuthProvider>
       <PeriodProvider>
-        <BrowserRouter>
-          <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route
-              element={
-                <ProtectedRoute>
-                  <Layout />
-                </ProtectedRoute>
-              }
-            >
-              <Route path="/" element={guarded(<Dashboard />)} />
-              <Route path="/inscripciones" element={guarded(<Inscripciones />)} />
-              <Route path="/renovaciones" element={guarded(<Renovaciones />)} />
-              <Route path="/registros-visitas" element={guarded(<RegistroVisita />)} />
-              <Route path="/caja-visitas" element={guarded(<CajaVisitas />)} />
-              <Route path="/scanner" element={guarded(<Scanner />)} />
-              <Route path="/reportes" element={guarded(<Reportes />)} />
-              <Route path="/payment-monitor" element={guarded(<PaymentMonitor />)} />
-              <Route path="/enum" element={guarded(<Enum />)} />
-              <Route path="/dia" element={guarded(<ReporteDia />)} />
-              <Route path="/completos" element={guarded(<Completos />)} />
-              <Route path="/faltan" element={guarded(<Faltan />)} />
-              <Route path="/usuarios" element={guarded(<Usuarios />)} />
-              <Route path="/auditoria" element={guarded(<Auditoria />)} />
-              <Route path="/nomina" element={guarded(<Nomina />)} />
+        <PrivacyProvider>
+          <BrowserRouter>
+            <Routes>
+              <Route path="/login" element={<Login />} />
               <Route
-                path="*"
                 element={
-                  <Suspense fallback={<PageFallback />}>
-                    <ComingSoon title="Página no encontrada" />
-                  </Suspense>
+                  <ProtectedRoute>
+                    <Layout />
+                  </ProtectedRoute>
                 }
-              />
-            </Route>
-          </Routes>
-        </BrowserRouter>
+              >
+                <Route path="/" element={guarded(<Dashboard />)} />
+                <Route path="/inscripciones" element={guarded(<Inscripciones />)} />
+                <Route path="/renovaciones" element={guarded(<Renovaciones />)} />
+                <Route path="/registros-visitas" element={guarded(<RegistroVisita />)} />
+                <Route path="/caja-visitas" element={guarded(<CajaVisitas />)} />
+                <Route path="/scanner" element={guarded(<Scanner />)} />
+                <Route path="/reportes" element={guarded(<Reportes />)} />
+                <Route path="/payment-monitor" element={guarded(<PaymentMonitor />)} />
+                <Route path="/enum" element={guarded(<Enum />)} />
+                <Route path="/dia" element={guarded(<ReporteDia />)} />
+                <Route path="/completos" element={guarded(<Completos />)} />
+                <Route path="/faltan" element={guarded(<Faltan />)} />
+                <Route path="/usuarios" element={guarded(<Usuarios />)} />
+                <Route path="/auditoria" element={guarded(<Auditoria />)} />
+                <Route path="/nomina" element={guarded(<Nomina />)} />
+                <Route
+                  path="*"
+                  element={
+                    <Suspense fallback={<PageFallback />}>
+                      <ComingSoon title="Página no encontrada" />
+                    </Suspense>
+                  }
+                />
+              </Route>
+            </Routes>
+          </BrowserRouter>
+        </PrivacyProvider>
       </PeriodProvider>
     </AuthProvider>
   )

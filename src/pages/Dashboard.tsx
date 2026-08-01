@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { FileText, RefreshCw, Eye, Pencil, Loader2, Trash2, FolderOpen } from 'lucide-react'
 import { usePeriod } from '../context/PeriodContext'
+import { usePrivacy, tieneFolio } from '../context/PrivacyContext'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import { decryptText } from '../lib/crypto'
@@ -12,12 +13,23 @@ import Modal from '../components/Modal'
 import RegistroForm from '../components/RegistroForm'
 import EncryptedPhotoViewer from '../components/EncryptedPhotoViewer'
 import ExpedienteModal from '../components/ExpedienteModal'
+import Masked from '../components/Masked'
 import { useRegistros } from '../hooks/useRegistros'
 import { PAGO_LABEL, type Registro, type RecordKind } from '../types/database'
 
-function DecryptedField({ label, cipher }: { label: string; cipher: string | null }) {
+function DecryptedField({
+  label,
+  cipher,
+  masked,
+}: {
+  label: string
+  cipher: string | null
+  masked?: boolean
+}) {
   const [value, setValue] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+
+  if (masked) return <Field label={label} value="••••••••" />
 
   if (!cipher) return <Field label={label} value="—" />
 
@@ -75,6 +87,7 @@ function useCount(kind: RecordKind, mes: string, anio: number) {
 export default function Dashboard() {
   const { mes, anio } = usePeriod()
   const { role } = useAuth()
+  const { hideSinFolio } = usePrivacy()
   const [tab, setTab] = useState<RecordKind>('inscripcion')
   const [search, setSearch] = useState('')
   const [detail, setDetail] = useState<Registro | null>(null)
@@ -185,14 +198,18 @@ export default function Dashboard() {
               )}
               {filtered.map((r) => (
                 <tr key={r.id} className="border-b border-border/60 hover:bg-surface-2/60">
-                  <td className="px-4 py-3 text-white font-medium whitespace-nowrap">{r.nombre}</td>
+                  <td className="px-4 py-3 text-white font-medium whitespace-nowrap">
+                    <Masked folio={r.folio} value={r.nombre} />
+                  </td>
                   <td className="px-4 py-3 text-gray-300">{r.folio || '0'}</td>
                   <td className="px-4 py-3">
                     <StatusBadge status={r.estatus} />
                   </td>
                   <td className="px-4 py-3 text-gray-300">{PAGO_LABEL[r.forma_pago]}</td>
                   <td className="px-4 py-3 text-gray-300 whitespace-nowrap">{r.horario || '—'}</td>
-                  <td className="px-4 py-3 text-gray-300">{r.atendido_por || '—'}</td>
+                  <td className="px-4 py-3 text-gray-300">
+                    <Masked folio={r.folio} value={r.atendido_por || '—'} />
+                  </td>
                   <td className="px-4 py-3 text-gray-300 whitespace-nowrap">
                     {r.fecha_ingreso ? new Date(r.fecha_ingreso).toLocaleDateString() : '—'}
                   </td>
@@ -245,7 +262,7 @@ export default function Dashboard() {
       {detail && (
         <Modal title="Detalles del registro" onClose={() => setDetail(null)}>
           <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 text-sm">
-            <Field label="Nombre" value={detail.nombre} />
+            <Field label="Nombre" value={<Masked folio={detail.folio} value={detail.nombre} />} />
             <Field label="Folio" value={detail.folio || '0'} />
             <Field label="Mes" value={detail.mes} />
             <Field label="Estatus" value={<StatusBadge status={detail.estatus} />} />
@@ -253,7 +270,11 @@ export default function Dashboard() {
             <Field label="Monto" value={detail.monto === null ? 'Oculto para tu rol' : `$${detail.monto.toFixed(2)}`} />
             <Field label="Atendido por" value={detail.atendido_por || '—'} />
             <Field label="Horario" value={detail.horario || '—'} />
-            <DecryptedField label="Teléfono" cipher={detail.telefono} />
+            <DecryptedField
+              label="Teléfono"
+              cipher={detail.telefono}
+              masked={hideSinFolio && !tieneFolio(detail.folio)}
+            />
             <Field
               label="Fecha de ingreso"
               value={detail.fecha_ingreso ? new Date(detail.fecha_ingreso).toLocaleString() : '—'}
@@ -262,10 +283,14 @@ export default function Dashboard() {
           {detail.comentarios && (
             <div className="mt-4 pt-4 border-t border-border text-sm text-gray-300">
               <span className="text-gray-500 block text-xs mb-1">Comentarios (cifrados):</span>
-              <DecryptedComentarios cipher={detail.comentarios} />
+              {hideSinFolio && !tieneFolio(detail.folio) ? (
+                <p>••••••••</p>
+              ) : (
+                <DecryptedComentarios cipher={detail.comentarios} />
+              )}
             </div>
           )}
-          {detail.foto_path && detail.foto_iv && detail.foto_salt && (
+          {detail.foto_path && detail.foto_iv && detail.foto_salt && !(hideSinFolio && !tieneFolio(detail.folio)) && (
             <div className="mt-4 pt-4 border-t border-border">
               <span className="text-gray-500 block text-xs mb-2">Foto del alumno (cifrada):</span>
               <EncryptedPhotoViewer path={detail.foto_path} iv={detail.foto_iv} salt={detail.foto_salt} />

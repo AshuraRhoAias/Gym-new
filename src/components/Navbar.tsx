@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react'
 import { NavLink } from 'react-router-dom'
-import { Dumbbell, User, LogOut, Menu, X } from 'lucide-react'
+import { Dumbbell, EyeOff, User, LogOut, Menu, X } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
+import { usePrivacy } from '../context/PrivacyContext'
 import { isRouteAllowed, ROLE_LABEL } from '../lib/permissions'
 
 const LINKS = [
@@ -24,6 +25,7 @@ const LINKS = [
 
 export default function Navbar() {
   const { username, role, signOut } = useAuth()
+  const { hideSinFolio } = usePrivacy()
   const [open, setOpen] = useState(false)
   const [userMenu, setUserMenu] = useState(false)
 
@@ -57,6 +59,14 @@ export default function Navbar() {
         </nav>
 
         <div className="flex items-center gap-2 shrink-0">
+          {hideSinFolio && (
+            <span
+              title="Modo privacidad activo (AltGr+5): oculta datos de registros sin folio"
+              className="hidden sm:flex items-center gap-1 bg-warning/15 text-amber-300 border border-warning/30 rounded-md px-2 py-1 text-xs"
+            >
+              <EyeOff size={12} /> Privacidad
+            </span>
+          )}
           <div className="relative">
             <button
               onClick={() => setUserMenu((v) => !v)}

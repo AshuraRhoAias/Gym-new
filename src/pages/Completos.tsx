@@ -1,14 +1,17 @@
 import { useMemo, useState } from 'react'
 import { CheckCircle2 } from 'lucide-react'
 import { usePeriod } from '../context/PeriodContext'
+import { usePrivacy, tieneFolio } from '../context/PrivacyContext'
 import { usePeriodRegistros } from '../hooks/usePeriodRegistros'
 import PeriodSelector from '../components/PeriodSelector'
 import StatusBadge from '../components/StatusBadge'
 import PhoneReveal from '../components/PhoneReveal'
+import Masked from '../components/Masked'
 import { PAGO_LABEL } from '../types/database'
 
 export default function Completos() {
   const { mes, anio } = usePeriod()
+  const { hideSinFolio } = usePrivacy()
   const { data, loading } = usePeriodRegistros(mes, anio)
   const [search, setSearch] = useState('')
 
@@ -90,7 +93,9 @@ export default function Completos() {
                     <td className="px-4 py-2 text-gray-300 whitespace-nowrap">
                       {r.kind.startsWith('inscripcion') ? 'Inscripción' : 'Renovación'}
                     </td>
-                    <td className="px-4 py-2 text-white">{r.nombre}</td>
+                    <td className="px-4 py-2 text-white">
+                      <Masked folio={r.folio} value={r.nombre} />
+                    </td>
                     <td className="px-4 py-2 text-gray-300">{r.folio || '0'}</td>
                     <td className="px-4 py-2 text-gray-300">{PAGO_LABEL[r.forma_pago]}</td>
                     <td className="px-4 py-2 text-gray-200">
@@ -100,7 +105,7 @@ export default function Completos() {
                       <StatusBadge status={r.estatus} />
                     </td>
                     <td className="px-4 py-2 text-gray-400">
-                      <PhoneReveal cipher={r.telefono} />
+                      <PhoneReveal cipher={r.telefono} masked={hideSinFolio && !tieneFolio(r.folio)} />
                     </td>
                   </tr>
                 ))}

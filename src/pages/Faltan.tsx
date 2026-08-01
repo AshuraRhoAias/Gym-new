@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import { ClipboardList } from 'lucide-react'
 import { usePeriod } from '../context/PeriodContext'
+import { usePrivacy, tieneFolio } from '../context/PrivacyContext'
 import { supabase } from '../lib/supabase'
 import PeriodSelector from '../components/PeriodSelector'
 import PhoneReveal from '../components/PhoneReveal'
+import Masked from '../components/Masked'
 import type { Registro } from '../types/database'
 
 interface RegistroConFaltantes extends Registro {
@@ -12,6 +14,7 @@ interface RegistroConFaltantes extends Registro {
 
 export default function Faltan() {
   const { mes, anio } = usePeriod()
+  const { hideSinFolio } = usePrivacy()
   const [registros, setRegistros] = useState<RegistroConFaltantes[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -101,10 +104,12 @@ export default function Faltan() {
           <div key={r.id} className="bg-surface border border-border rounded-xl p-4">
             <div className="flex flex-wrap items-start justify-between gap-2 mb-2">
               <div>
-                <h3 className="text-white font-medium">{r.nombre}</h3>
+                <h3 className="text-white font-medium">
+                  <Masked folio={r.folio} value={r.nombre} />
+                </h3>
                 <div className="text-xs text-gray-500 flex flex-wrap gap-3 mt-1">
                   <span className="flex items-center gap-1">
-                    📞 <PhoneReveal cipher={r.telefono} />
+                    📞 <PhoneReveal cipher={r.telefono} masked={hideSinFolio && !tieneFolio(r.folio)} />
                   </span>
                   <span>{r.mes}</span>
                   <span>Folio: {r.folio || '0'}</span>
