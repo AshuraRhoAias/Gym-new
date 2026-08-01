@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { FileText, RefreshCw, Eye, Pencil, Loader2, Trash2 } from 'lucide-react'
+import { FileText, RefreshCw, Eye, Pencil, Loader2, Trash2, FolderOpen } from 'lucide-react'
 import { usePeriod } from '../context/PeriodContext'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
@@ -11,6 +11,7 @@ import StatusBadge from '../components/StatusBadge'
 import Modal from '../components/Modal'
 import RegistroForm from '../components/RegistroForm'
 import EncryptedPhotoViewer from '../components/EncryptedPhotoViewer'
+import ExpedienteModal from '../components/ExpedienteModal'
 import { useRegistros } from '../hooks/useRegistros'
 import { PAGO_LABEL, type Registro, type RecordKind } from '../types/database'
 
@@ -78,6 +79,7 @@ export default function Dashboard() {
   const [search, setSearch] = useState('')
   const [detail, setDetail] = useState<Registro | null>(null)
   const [editing, setEditing] = useState<Registro | null>(null)
+  const [expediente, setExpediente] = useState<Registro | null>(null)
   const [deleting, setDeleting] = useState<string | null>(null)
 
   const { data, loading, refresh } = useRegistros(tab, mes, anio)
@@ -212,6 +214,15 @@ export default function Dashboard() {
                           <Pencil size={16} />
                         </button>
                       )}
+                      {role !== 'viewer' && (
+                        <button
+                          onClick={() => setExpediente(r)}
+                          className="text-gray-400 hover:text-accent"
+                          title="Expediente (documentos y firmas)"
+                        >
+                          <FolderOpen size={16} />
+                        </button>
+                      )}
                       {canDelete(role) && (
                         <button
                           onClick={() => handleDelete(r)}
@@ -274,6 +285,8 @@ export default function Dashboard() {
           }}
         />
       )}
+
+      {expediente && <ExpedienteModal registro={expediente} onClose={() => setExpediente(null)} />}
     </div>
   )
 }

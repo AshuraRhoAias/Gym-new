@@ -29,9 +29,31 @@ Implementado y funcional:
   inscripción/renovación nueva, con botón para compartirlo por WhatsApp
 - Roles y permisos (superadmin/admin/editor/viewer), auditoría de cambios y gestión de cuentas
   (ver sección dedicada abajo)
+- Expediente por registro (botón 📁 en el Dashboard): adjuntar foto/archivo cifrado por cada
+  documento requerido, y llenar/firmar en recepción la Cédula de Inscripción, Carta Responsiva y
+  Reglamento con firma capturada en pantalla (funciona con el dedo desde el celular)
 
 Pendiente: envío masivo de "Hoja Rosa" por WhatsApp (visto en las capturas de referencia) y
 lectura de QR en vivo con cámara (por ahora es por imagen subida) — quedan fuera de este MVP.
+
+## Expediente: documentos adjuntos y firmas digitales
+
+Desde el ícono 📁 (Expediente) en la fila de cada registro del Dashboard:
+
+- **Documentos**: cada uno de los 8 documentos requeridos (Cédula, Certificado Médico, CURP,
+  INE, Acta, Comprobante de Domicilio, Fotos, Donativo) tiene un botón "Adjuntar foto/archivo"
+  que cifra el archivo (AES-256-GCM, igual que la foto del alumno) y lo sube al bucket privado
+  `documentos`. Subir un archivo marca automáticamente el documento como entregado. El checkbox
+  de "entregado" sigue existiendo por separado, por si el documento se entregó físicamente sin
+  digitalizarlo.
+- **Cédula de Inscripción, Carta Responsiva y Reglamento**: se llenan directamente en recepción
+  — texto editable (con una plantilla estándar precargada), nombre de quien firma, y un lienzo de
+  firma táctil (`SignaturePad`, usa Pointer Events: funciona igual con mouse que con el dedo en un
+  celular o tablet). Al guardar, la firma se cifra y se sube igual que los documentos; se puede
+  volver a firmar en cualquier momento (queda la versión más reciente).
+- Los textos de la Carta Responsiva y el Reglamento en `DocumentoFirmableCard.tsx` son una
+  plantilla genérica de ejemplo — revísalos y ajústalos a lo que tu gimnasio necesite legalmente
+  antes de usarlos en producción; no son asesoría legal.
 
 ## Roles, permisos y auditoría
 
