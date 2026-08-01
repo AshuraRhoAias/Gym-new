@@ -12,6 +12,13 @@ interface DocumentoUploadFieldProps {
   documento: string
   archivo: DocumentoArchivo | null
   onUploaded: (archivo: DocumentoArchivo) => void
+  /**
+   * Cuando es true, el archivo se cifra y sube a Storage de inmediato, pero
+   * NO se inserta en `documentos_archivos`/`documentos_entregados` (útil al
+   * crear un registro nuevo, cuya fila aún no existe y violaría la FK). El
+   * padre recibe los metadatos vía `onUploaded` y decide cuándo persistirlos.
+   */
+  deferred?: boolean
 }
 
 export default function DocumentoUploadField({
@@ -19,6 +26,7 @@ export default function DocumentoUploadField({
   documento,
   archivo,
   onUploaded,
+  deferred,
 }: DocumentoUploadFieldProps) {
   const { username } = useAuth()
   const inputRef = useRef<HTMLInputElement>(null)
@@ -41,20 +49,27 @@ export default function DocumentoUploadField({
       })
       if (uploadErr) throw uploadErr
 
+      const meta = {
+        registro_id: registroId,
+        documento,
+        file_path: path,
+        file_iv: iv,
+        file_salt: s,
+        mime_type: file.type || 'application/octet-stream',
+        uploaded_by: username,
+      }
+
+      if (deferred) {
+        // El registro todavía no existe en la base (se está creando): no se
+        // puede insertar en documentos_archivos por la FK. Se devuelven los
+        // metadatos para que el formulario los persista tras crear el registro.
+        onUploaded({ id: crypto.randomUUID(), created_at: new Date().toISOString(), ...meta })
+        return
+      }
+
       const { data, error: dbErr } = await supabase
         .from('documentos_archivos')
-        .upsert(
-          {
-            registro_id: registroId,
-            documento,
-            file_path: path,
-            file_iv: iv,
-            file_salt: s,
-            mime_type: file.type || 'application/octet-stream',
-            uploaded_by: username,
-          },
-          { onConflict: 'registro_id,documento' },
-        )
+        .upsert(meta, { onConflict: 'registro_id,documento' })
         .select('*')
         .single()
       if (dbErr || !data) throw dbErr ?? new Error('No se pudo guardar el documento')

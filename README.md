@@ -38,14 +38,24 @@ lectura de QR en vivo con cámara (por ahora es por imagen subida) — quedan fu
 
 ## Expediente: documentos adjuntos y firmas digitales
 
-Desde el ícono 📁 (Expediente) en la fila de cada registro del Dashboard:
+En **Inscripciones** y **Renovaciones**, y también desde el ícono 📁 (Expediente) en la fila de
+cada registro del Dashboard:
 
 - **Documentos**: cada uno de los 8 documentos requeridos (Cédula, Certificado Médico, CURP,
-  INE, Acta, Comprobante de Domicilio, Fotos, Donativo) tiene un botón "Adjuntar foto/archivo"
-  que cifra el archivo (AES-256-GCM, igual que la foto del alumno) y lo sube al bucket privado
-  `documentos`. Subir un archivo marca automáticamente el documento como entregado. El checkbox
-  de "entregado" sigue existiendo por separado, por si el documento se entregó físicamente sin
-  digitalizarlo.
+  INE, Acta, Comprobante de Domicilio, Fotos, Donativo) ya **no** se marca con un checkbox
+  manual — solo cuenta como entregado cuando se le toma una foto o se sube el archivo (botón
+  "Adjuntar foto/archivo", con `capture="environment"` para abrir la cámara directamente en
+  celular). El archivo se cifra (AES-256-GCM, igual que la foto del alumno) y se sube al bucket
+  privado `documentos`; subirlo marca automáticamente `documentos_entregados.entregado = true`.
+  - Al **crear** una inscripción/renovación nueva, el registro aún no existe en la base cuando
+    se empiezan a subir documentos: el formulario genera un id de cliente desde el primer render
+    y sube los archivos cifrados a Storage con ese id por adelantado, pero difiere la escritura
+    en `documentos_archivos` (violaría la FK contra una fila que no existe todavía) hasta
+    insertar el registro con ese mismo id al final. Verificado end-to-end contra el proyecto
+    real, incluyendo que el insert directo en `documentos_archivos` antes de crear el registro
+    efectivamente falla por la foreign key, como se espera.
+  - Al **editar** un registro existente, la subida escribe de inmediato (no hay nada que
+    diferir).
 - **Cédula de Inscripción, Carta Responsiva y Reglamento**: se llenan directamente en recepción
   — texto editable (con una plantilla estándar precargada), nombre de quien firma, y un lienzo de
   firma táctil (`SignaturePad`, usa Pointer Events: funciona igual con mouse que con el dedo en un

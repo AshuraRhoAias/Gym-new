@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import { usePeriod } from '../context/PeriodContext'
@@ -7,10 +7,12 @@ import { buildQrToken, qrToDataUrl } from '../lib/qr'
 import { canSeeMoney } from '../lib/permissions'
 import Modal from './Modal'
 import EncryptedPhotoField, { type FotoRef } from './EncryptedPhotoField'
+import DocumentoUploadField from './DocumentoUploadField'
 import QrShareCard from './QrShareCard'
 import {
   DOCUMENTOS_REQUERIDOS,
   MESES,
+  type DocumentoArchivo,
   type PaymentMethod,
   type RecordKind,
   type RecordStatus,
@@ -88,9 +90,12 @@ export default function RegistroForm({ kind, initial, prefill, onClose, onSaved,
       folio: prefill?.folio ?? '',
     }
   })
-  const [docs, setDocs] = useState<Record<string, boolean>>(() =>
-    Object.fromEntries(DOCUMENTOS_REQUERIDOS.map((d) => [d, false])),
-  )
+  // Id fijo desde el primer render: se usa como registro_id para los
+  // documentos que se suban DURANTE la creación, antes de que la fila de
+  // `registros` exista (se inserta con este mismo id al guardar).
+  const registroIdRef = useRef(initial?.id ?? crypto.randomUUID())
+  const [archivos, setArchivos] = useState<Record<string, DocumentoArchivo>>({})
+  const [archivosLoading, setArchivosLoading] = useState(!!initial)
   const [fotoRef, setFotoRef] = useState<FotoRef | null>(
     initial?.foto_path && initial.foto_iv && initial.foto_salt
       ? { path: initial.foto_path, iv: initial.foto_iv, salt: initial.foto_salt }
@@ -105,17 +110,14 @@ export default function RegistroForm({ kind, initial, prefill, onClose, onSaved,
 
   useEffect(() => {
     if (!initial) return
+    setArchivosLoading(true)
     supabase
-      .from('documentos_entregados')
-      .select('documento, entregado')
+      .from('documentos_archivos')
+      .select('*')
       .eq('registro_id', initial.id)
       .then(({ data }) => {
-        if (!data) return
-        setDocs((prev) => {
-          const next = { ...prev }
-          for (const row of data) next[row.documento] = row.entregado
-          return next
-        })
+        setArchivos(Object.fromEntries((data ?? []).map((d) => [d.documento, d as DocumentoArchivo])))
+        setArchivosLoading(false)
       })
   }, [initial])
 
@@ -137,7 +139,7 @@ export default function RegistroForm({ kind, initial, prefill, onClose, onSaved,
     }
   }, [initial])
 
-  const faltantes = DOCUMENTOS_REQUERIDOS.filter((d) => !docs[d]).length
+  const faltantes = DOCUMENTOS_REQUERIDOS.filter((d) => !archivos[d]).length
 
   const update = <K extends keyof FormState>(key: K, value: FormState[K]) =>
     setForm((f) => ({ ...f, [key]: value }))
@@ -192,7 +194,7 @@ export default function RegistroForm({ kind, initial, prefill, onClose, onSaved,
       payload.monto = 0
     }
 
-    let registroId = initial?.id
+    const registroId = registroIdRef.current
     if (initial) {
       const { error: updErr } = await supabase.from('registros').update(payload).eq('id', initial.id)
       if (updErr) {
@@ -201,23 +203,29 @@ export default function RegistroForm({ kind, initial, prefill, onClose, onSaved,
         return
       }
     } else {
-      const { data, error: insErr } = await supabase.from('registros').insert(payload).select('id').single()
-      if (insErr || !data) {
-        setError(insErr?.message ?? 'No se pudo guardar')
+      // Se inserta con el id generado desde el primer render, para que
+      // coincida con la carpeta de Storage donde ya se subieron (cifrados)
+      // los documentos adjuntados mientras se llenaba el formulario.
+      const { error: insErr } = await supabase.from('registros').insert({ id: registroId, ...payload })
+      if (insErr) {
+        setError(insErr.message)
         setSaving(false)
         return
       }
-      registroId = data.id
+      // Los documentos subidos en modo diferido aún no existen en
+      // documentos_archivos (la fila de registros no existía antes).
+      const pendientes = Object.values(archivos).map(({ id: _id, created_at: _createdAt, ...rest }) => rest)
+      if (pendientes.length > 0) {
+        await supabase.from('documentos_archivos').upsert(pendientes, { onConflict: 'registro_id,documento' })
+      }
     }
 
-    if (registroId) {
-      const rows = DOCUMENTOS_REQUERIDOS.map((documento) => ({
-        registro_id: registroId!,
-        documento,
-        entregado: docs[documento],
-      }))
-      await supabase.from('documentos_entregados').upsert(rows, { onConflict: 'registro_id,documento' })
-    }
+    const rows = DOCUMENTOS_REQUERIDOS.map((documento) => ({
+      registro_id: registroId,
+      documento,
+      entregado: !!archivos[documento],
+    }))
+    await supabase.from('documentos_entregados').upsert(rows, { onConflict: 'registro_id,documento' })
 
     setSaving(false)
 
@@ -357,23 +365,28 @@ export default function RegistroForm({ kind, initial, prefill, onClose, onSaved,
             {DOCUMENTOS_REQUERIDOS.length - faltantes}/{DOCUMENTOS_REQUERIDOS.length}
           </span>
         </div>
-        <p className="text-xs text-gray-500 mb-3">Marca los documentos que YA han sido entregados</p>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-          {DOCUMENTOS_REQUERIDOS.map((doc) => (
-            <label
-              key={doc}
-              className="flex items-center gap-2 bg-surface border border-border rounded-md px-2.5 py-2 text-xs text-gray-200 cursor-pointer"
-            >
-              <input
-                type="checkbox"
-                checked={docs[doc]}
-                onChange={(e) => setDocs((d) => ({ ...d, [doc]: e.target.checked }))}
-                className="accent-accent"
-              />
-              {doc}
-            </label>
-          ))}
-        </div>
+        <p className="text-xs text-gray-500 mb-3">
+          Un documento solo cuenta como entregado cuando se le toma una foto o se sube el archivo
+          (se cifra antes de subirse).
+        </p>
+        {archivosLoading ? (
+          <p className="text-xs text-gray-500">Cargando documentos…</p>
+        ) : (
+          <div className="flex flex-col divide-y divide-border border border-border rounded-lg overflow-hidden">
+            {DOCUMENTOS_REQUERIDOS.map((doc) => (
+              <div key={doc} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 bg-surface">
+                <span className="text-xs text-gray-200 min-w-[150px]">{doc}</span>
+                <DocumentoUploadField
+                  registroId={registroIdRef.current}
+                  documento={doc}
+                  archivo={archivos[doc] ?? null}
+                  deferred={!initial}
+                  onUploaded={(archivo) => setArchivos((prev) => ({ ...prev, [doc]: archivo }))}
+                />
+              </div>
+            ))}
+          </div>
+        )}
         {faltantes > 0 && (
           <p className="text-xs text-danger mt-3">Faltan {faltantes} documento(s)</p>
         )}
@@ -400,7 +413,7 @@ export default function RegistroForm({ kind, initial, prefill, onClose, onSaved,
         )}
         <button
           type="submit"
-          disabled={saving || decrypting}
+          disabled={saving || decrypting || archivosLoading}
           className="px-4 py-2 text-sm rounded-lg bg-accent hover:bg-accent-dark disabled:opacity-60 text-black font-medium"
         >
           {decrypting ? 'Descifrando…' : saving ? 'Guardando…' : initial ? 'Guardar cambios' : 'Guardar Inscripción'}
