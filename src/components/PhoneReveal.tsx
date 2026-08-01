@@ -3,10 +3,11 @@ import { Loader2, Phone } from 'lucide-react'
 import { decryptText } from '../lib/crypto'
 
 /** Muestra "Ver teléfono" y descifra bajo demanda; evita descifrar filas completas de una lista al cargar. */
-export default function PhoneReveal({ cipher }: { cipher: string | null }) {
+export default function PhoneReveal({ cipher, masked }: { cipher: string | null; masked?: boolean }) {
   const [value, setValue] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
+  if (masked) return <span>••••••••</span>
   if (!cipher) return <span>—</span>
   if (value !== null) return <span>{value}</span>
 

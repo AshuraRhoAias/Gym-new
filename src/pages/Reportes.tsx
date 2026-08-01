@@ -5,6 +5,7 @@ import { usePeriodRegistros } from '../hooks/usePeriodRegistros'
 import PeriodSelector from '../components/PeriodSelector'
 import MiniStat from '../components/MiniStat'
 import StatusBadge from '../components/StatusBadge'
+import Masked from '../components/Masked'
 
 export default function Reportes() {
   const { mes, anio } = usePeriod()
@@ -95,7 +96,9 @@ function ReportSection({
             <tbody>
               {rows.slice(0, 15).map((r) => (
                 <tr key={r.id} className="border-b border-border/50">
-                  <td className="px-4 py-2 text-white">{r.nombre}</td>
+                  <td className="px-4 py-2 text-white">
+                    <Masked folio={r.folio} value={r.nombre} />
+                  </td>
                   <td className="px-4 py-2 text-gray-300">{r.folio || '0'}</td>
                   <td className="px-4 py-2">
                     <StatusBadge status={r.estatus} />
