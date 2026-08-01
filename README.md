@@ -32,6 +32,10 @@ Implementado y funcional:
 - Expediente por registro (botón 📁 en el Dashboard): adjuntar foto/archivo cifrado por cada
   documento requerido, y llenar/firmar en recepción la Cédula de Inscripción, Carta Responsiva y
   Reglamento con firma capturada en pantalla (funciona con el dedo desde el celular)
+- Nómina: alta de trabajadores y registro de sus pagos, con reporte mensual (total, por
+  trabajador, por método de pago) — exclusiva de superadministrador y administrador
+- Buscador global de folios (**Alt+Espacio** en cualquier pantalla): lista solo registros
+  (de cualquier tipo) que ya tengan folio asignado, buscable por nombre
 
 Pendiente: envío masivo de "Hoja Rosa" por WhatsApp (visto en las capturas de referencia) y
 lectura de QR en vivo con cámara (por ahora es por imagen subida) — quedan fuera de este MVP.
@@ -102,6 +106,28 @@ sigan funcionando; un usuario técnico que llame directamente a la API REST sobr
 vez de `registros_view`) podría obtener el monto igualmente. Cerrar ese último resquicio requiere
 revocar el `SELECT` de la tabla base para roles no elevados, lo cual no se hizo en esta pasada
 para no arriesgar romper las operaciones de escritura sin poder probarlo en este entorno.
+
+## Nómina (pagos a trabajadores)
+
+Página `/nomina`, exclusiva de superadministrador y administrador — bloqueada a nivel de base de
+datos para editor/viewer (mismo patrón que `caja_movimientos`: sus políticas RLS de
+`select`/`insert`/`update` solo permiten `superadmin`/`admin`, `delete` solo `superadmin`), no
+solo oculta en el menú.
+
+- **Trabajadores** (`trabajadores`): alta simple (nombre, puesto).
+- **Pagos** (`pagos_trabajadores`): concepto, monto, forma de pago, fecha y mes/año al que
+  corresponde, ligados a un trabajador.
+- **Reporte mensual**: se recalcula automáticamente según el mes/año seleccionado en la barra
+  superior — total pagado, número de pagos, trabajadores pagados ese mes, desglose por trabajador
+  y por método de pago.
+
+## Buscador global de folios (Alt+Espacio)
+
+Desde cualquier pantalla autenticada, `Alt+Espacio` abre un buscador rápido
+(`GlobalFolioSearch`) que consulta `registros_view` filtrando solo registros con folio asignado
+(`folio is not null and folio != '0'`), sin restringir por tipo de cuenta/kind — busca por
+nombre en inscripciones, renovaciones y sus variantes "Bacho" a la vez. `Esc` o click fuera lo
+cierra.
 
 ## Cifrado de datos sensibles
 

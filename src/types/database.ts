@@ -118,6 +118,28 @@ export interface Profile {
   created_at: string
 }
 
+export interface Trabajador {
+  id: string
+  nombre: string
+  puesto: string | null
+  activo: boolean
+  created_by: string | null
+  created_at: string
+}
+
+export interface PagoTrabajador {
+  id: string
+  trabajador_id: string
+  concepto: string
+  monto: number
+  forma_pago: PaymentMethod
+  mes: string
+  anio: number
+  fecha_pago: string
+  registrado_por: string | null
+  created_at: string
+}
+
 export interface CajaMovimiento {
   id: string
   kind: MovementKind
