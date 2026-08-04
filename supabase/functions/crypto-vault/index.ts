@@ -71,9 +71,29 @@ async function decryptBytes(payload: CipherPayload): Promise<Uint8Array> {
   return new Uint8Array(plainBuf);
 }
 
+// La función se llama desde el navegador (web y Tauri) con distintos
+// orígenes (localhost, previews de Vercel, dominio de producción, el origen
+// especial de un webview de escritorio), así que se responde con CORS
+// abierto. No es una brecha de seguridad: cada request igual exige un JWT de
+// usuario autenticado válido (auth.getUser() abajo) antes de cifrar/descifrar
+// nada; CORS solo controla qué páginas web pueden leer la respuesta, no
+// reemplaza la autorización.
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+};
+
 Deno.serve(async (req: Request) => {
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
+
   if (req.method !== "POST") {
-    return new Response(JSON.stringify({ error: "Method not allowed" }), { status: 405 });
+    return new Response(JSON.stringify({ error: "Method not allowed" }), {
+      status: 405,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 
   const authHeader = req.headers.get("Authorization") ?? "";
@@ -84,7 +104,10 @@ Deno.serve(async (req: Request) => {
   );
   const { data: userData, error: userErr } = await userClient.auth.getUser();
   if (userErr || !userData?.user) {
-    return new Response(JSON.stringify({ error: "No autenticado" }), { status: 401 });
+    return new Response(JSON.stringify({ error: "No autenticado" }), {
+      status: 401,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 
   try {
@@ -93,32 +116,38 @@ Deno.serve(async (req: Request) => {
 
     if (action === "encrypt") {
       const payload = await encryptBytes(encoder.encode(String(body.plaintext ?? "")));
-      return new Response(JSON.stringify(payload), { headers: { "Content-Type": "application/json" } });
+      return new Response(JSON.stringify(payload), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     if (action === "decrypt") {
       const bytes = await decryptBytes(body.payload as CipherPayload);
       return new Response(
         JSON.stringify({ plaintext: decoder.decode(bytes) }),
-        { headers: { "Content-Type": "application/json" } },
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
     if (action === "encrypt-bytes") {
       const payload = await encryptBytes(fromB64(String(body.data ?? "")));
-      return new Response(JSON.stringify(payload), { headers: { "Content-Type": "application/json" } });
+      return new Response(JSON.stringify(payload), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     if (action === "decrypt-bytes") {
       const bytes = await decryptBytes(body.payload as CipherPayload);
       return new Response(
         JSON.stringify({ data: toB64(bytes) }),
-        { headers: { "Content-Type": "application/json" } },
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
-    return new Response(JSON.stringify({ error: "Acción desconocida" }), { status: 400 });
+    return new Response(JSON.stringify({ error: "Acción desconocida" }), {
+      status: 400,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   } catch (err) {
-    return new Response(JSON.stringify({ error: (err as Error).message }), { status: 400 });
+    return new Response(JSON.stringify({ error: (err as Error).message }), {
+      status: 400,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 });

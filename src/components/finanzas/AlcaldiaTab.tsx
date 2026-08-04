@@ -359,7 +359,7 @@ export default function AlcaldiaTab({
           <input type="checkbox" checked={cfdiRenta} onChange={(e) => setCfdiRenta(e.target.checked)} />
           ¿Se recibió CFDI de la renta?
         </label>
-        {pago && cfdiRenta && (
+        {pago && (
           <ComprobanteCfdiField
             folio={pago.folio_comprobante ?? ''}
             onFolioChange={(v) => updateRentaComprobante({ folio_comprobante: v || null })}

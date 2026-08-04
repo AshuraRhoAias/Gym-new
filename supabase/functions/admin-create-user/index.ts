@@ -6,9 +6,25 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 const ALLOWED_ROLES = ["admin", "editor", "viewer"];
 const EMAIL_DOMAIN = "gymtech.local";
 
+// Ver crypto-vault/index.ts: CORS abierto porque se llama desde distintos
+// orígenes (web, previews, Tauri); la autorización real la hace el chequeo
+// de rol superadmin de abajo, no el navegador.
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+};
+
 Deno.serve(async (req: Request) => {
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
+
   if (req.method !== "POST") {
-    return new Response(JSON.stringify({ error: "Method not allowed" }), { status: 405 });
+    return new Response(JSON.stringify({ error: "Method not allowed" }), {
+      status: 405,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -22,7 +38,10 @@ Deno.serve(async (req: Request) => {
 
   const { data: callerData, error: callerErr } = await callerClient.auth.getUser();
   if (callerErr || !callerData?.user) {
-    return new Response(JSON.stringify({ error: "No autenticado" }), { status: 401 });
+    return new Response(JSON.stringify({ error: "No autenticado" }), {
+      status: 401,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 
   const admin = createClient(supabaseUrl, serviceRoleKey);
@@ -36,6 +55,7 @@ Deno.serve(async (req: Request) => {
   if (callerProfile?.role !== "superadmin") {
     return new Response(JSON.stringify({ error: "Solo el superadministrador puede crear cuentas" }), {
       status: 403,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 
@@ -48,15 +68,20 @@ Deno.serve(async (req: Request) => {
     if (!username || !/^[a-z0-9._-]{3,32}$/.test(username)) {
       return new Response(JSON.stringify({ error: "Usuario inválido (3-32 caracteres, sin espacios)" }), {
         status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
     if (password.length < 8) {
       return new Response(JSON.stringify({ error: "La contraseña debe tener al menos 8 caracteres" }), {
         status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
     if (!ALLOWED_ROLES.includes(role)) {
-      return new Response(JSON.stringify({ error: "Rol inválido" }), { status: 400 });
+      return new Response(JSON.stringify({ error: "Rol inválido" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     const email = `${username}@${EMAIL_DOMAIN}`;
@@ -68,6 +93,7 @@ Deno.serve(async (req: Request) => {
     if (createErr || !created?.user) {
       return new Response(JSON.stringify({ error: createErr?.message ?? "No se pudo crear el usuario" }), {
         status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
@@ -81,13 +107,19 @@ Deno.serve(async (req: Request) => {
       // Revertir la creación del usuario de auth si falla el perfil, para no
       // dejar cuentas huérfanas sin rol.
       await admin.auth.admin.deleteUser(created.user.id);
-      return new Response(JSON.stringify({ error: profileErr.message }), { status: 400 });
+      return new Response(JSON.stringify({ error: profileErr.message }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     return new Response(JSON.stringify({ id: created.user.id, username, role }), {
-      headers: { "Content-Type": "application/json" },
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
-    return new Response(JSON.stringify({ error: (err as Error).message }), { status: 400 });
+    return new Response(JSON.stringify({ error: (err as Error).message }), {
+      status: 400,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 });
