@@ -118,11 +118,16 @@ export interface Profile {
   created_at: string
 }
 
+export type Turno = 'manana' | 'tarde' | 'fin_semana'
+
 export interface Trabajador {
   id: string
   nombre: string
   puesto: string | null
   activo: boolean
+  turno: Turno | null
+  sueldo_mensual: number | null
+  horario: string | null
   created_by: string | null
   created_at: string
 }
@@ -149,6 +154,76 @@ export interface CajaMovimiento {
   concepto: string | null
   registro_id: string | null
   fecha: string
+}
+
+export interface NominaMensual {
+  id: string
+  trabajador_id: string
+  mes: string
+  anio: number
+  monto: number
+  timbrado: boolean
+  created_by: string | null
+  created_at: string
+}
+
+export interface PagoAlcaldia {
+  id: string
+  mes: string
+  anio: number
+  monto_convenio: number
+  monto_renta: number
+  cfdi_recibido: boolean
+  created_by: string | null
+  created_at: string
+}
+
+export interface AlcaldiaTicket {
+  id: string
+  pago_alcaldia_id: string
+  folio: string | null
+  monto: number
+  created_at: string
+}
+
+export type CategoriaGasto = 'papeleria' | 'limpieza' | 'internet' | 'mantenimiento' | 'otros'
+
+export const CATEGORIA_GASTO_LABEL: Record<CategoriaGasto, string> = {
+  papeleria: 'Papelería',
+  limpieza: 'Limpieza',
+  internet: 'Internet',
+  mantenimiento: 'Mantenimiento',
+  otros: 'Otros',
+}
+
+export interface GastoOperativo {
+  id: string
+  mes: string
+  anio: number
+  categoria: CategoriaGasto
+  descripcion: string | null
+  monto: number
+  tiene_cfdi: boolean
+  created_by: string | null
+  created_at: string
+}
+
+export interface MercadoPagoCobro {
+  id: string
+  mes: string
+  anio: number
+  fecha: string
+  concepto: string | null
+  monto_bruto: number
+  comision_pct: number
+  created_by: string | null
+  created_at: string
+}
+
+export const TURNO_LABEL: Record<Turno, string> = {
+  manana: 'Mañana',
+  tarde: 'Tarde',
+  fin_semana: 'Fin de semana',
 }
 
 export interface Database {
