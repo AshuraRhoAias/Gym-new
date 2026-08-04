@@ -105,7 +105,12 @@ export default function Renovaciones() {
             inline
             prefill={
               selected
-                ? { nombre: selected.nombre, telefono: selectedTelefono, folio: selected.folio ?? undefined }
+                ? {
+                    nombre: selected.nombre,
+                    telefono: selectedTelefono,
+                    folio: selected.folio ?? undefined,
+                    folio_anterior: selected.folio ?? undefined,
+                  }
                 : undefined
             }
             onClose={() => {

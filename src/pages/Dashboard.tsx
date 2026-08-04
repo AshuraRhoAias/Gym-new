@@ -205,7 +205,14 @@ export default function Dashboard() {
                   <td className="px-4 py-3">
                     <StatusBadge status={r.estatus} />
                   </td>
-                  <td className="px-4 py-3 text-gray-300">{PAGO_LABEL[r.forma_pago]}</td>
+                  <td className="px-4 py-3 text-gray-300">
+                    {PAGO_LABEL[r.forma_pago]}
+                    {r.saldo_pendiente != null && r.saldo_pendiente > 0 && (
+                      <span className="ml-1.5 text-xs px-1.5 py-0.5 rounded-md bg-danger/15 text-red-300">
+                        Debe ${r.saldo_pendiente.toFixed(2)}
+                      </span>
+                    )}
+                  </td>
                   <td className="px-4 py-3 text-gray-300 whitespace-nowrap">{r.horario || '—'}</td>
                   <td className="px-4 py-3 text-gray-300">
                     <Masked folio={r.folio} value={r.atendido_por || '—'} />
@@ -264,6 +271,7 @@ export default function Dashboard() {
           <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 text-sm">
             <Field label="Nombre" value={<Masked folio={detail.folio} value={detail.nombre} />} />
             <Field label="Folio" value={detail.folio || '0'} />
+            {detail.folio_anterior && <Field label="Folio anterior" value={detail.folio_anterior} />}
             <Field label="Mes" value={detail.mes} />
             <Field label="Estatus" value={<StatusBadge status={detail.estatus} />} />
             <Field label="Forma de pago" value={PAGO_LABEL[detail.forma_pago]} />
@@ -273,6 +281,9 @@ export default function Dashboard() {
                 <Field label="Comisión tarjeta (4.06%)" value={`-$${detail.comision_tarjeta.toFixed(2)}`} />
                 <Field label="Te llegó" value={`$${(detail.monto - detail.comision_tarjeta).toFixed(2)}`} />
               </>
+            )}
+            {detail.saldo_pendiente != null && detail.saldo_pendiente > 0 && (
+              <Field label="Saldo pendiente" value={<span className="text-danger">${detail.saldo_pendiente.toFixed(2)}</span>} />
             )}
             <Field label="Atendido por" value={detail.atendido_por || '—'} />
             <Field label="Horario" value={detail.horario || '—'} />
