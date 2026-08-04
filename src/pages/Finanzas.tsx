@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Wallet2, Landmark, Receipt, CreditCard, FileBarChart2, ShieldCheck } from 'lucide-react'
+import { Wallet2, Landmark, Receipt, FileBarChart2, ShieldCheck } from 'lucide-react'
 import { usePeriod } from '../context/PeriodContext'
 import { useAuth } from '../context/AuthContext'
 import { useFinanzas, periodoKey } from '../hooks/useFinanzas'
@@ -9,11 +9,10 @@ import ResumenCards from '../components/finanzas/ResumenCards'
 import NominaTab from '../components/finanzas/NominaTab'
 import AlcaldiaTab from '../components/finanzas/AlcaldiaTab'
 import GastosTab from '../components/finanzas/GastosTab'
-import MercadoPagoTab from '../components/finanzas/MercadoPagoTab'
 import ReporteTab from '../components/finanzas/ReporteTab'
 import DeclaracionesTab from '../components/finanzas/DeclaracionesTab'
 
-type TabKey = 'nomina' | 'alcaldia' | 'gastos' | 'mercadopago' | 'reporte' | 'declaraciones'
+type TabKey = 'nomina' | 'alcaldia' | 'gastos' | 'reporte' | 'declaraciones'
 
 export default function Finanzas() {
   const { mes, anio } = usePeriod()
@@ -26,8 +25,8 @@ export default function Finanzas() {
     nominaMensual,
     pagosAlcaldia,
     alcaldiaTickets,
+    convenioPagos,
     gastosOperativos,
-    mercadoPagoCobros,
     ingresosPorPeriodo,
     loading,
     refresh,
@@ -36,8 +35,8 @@ export default function Finanzas() {
   const nominaDelPeriodo = nominaMensual.filter((n) => n.mes === mes && n.anio === anio)
   const pagoAlcaldiaDelPeriodo = pagosAlcaldia.find((p) => p.mes === mes && p.anio === anio)
   const ticketsDelPago = alcaldiaTickets.filter((t) => t.pago_alcaldia_id === pagoAlcaldiaDelPeriodo?.id)
+  const convenioPagosDelPeriodo = convenioPagos.filter((c) => c.mes === mes && c.anio === anio)
   const gastosDelPeriodo = gastosOperativos.filter((g) => g.mes === mes && g.anio === anio)
-  const cobrosMpDelPeriodo = mercadoPagoCobros.filter((c) => c.mes === mes && c.anio === anio)
   const ingreso = ingresosPorPeriodo.get(periodoKey(mes, anio))
 
   const resumen = calcularResumen({
@@ -46,14 +45,12 @@ export default function Finanzas() {
     pagoAlcaldia: pagoAlcaldiaDelPeriodo,
     ticketsDelPago,
     gastosDelPeriodo,
-    cobrosMpDelPeriodo,
   })
 
   const TABS: { key: TabKey; label: string; icon: typeof Wallet2 }[] = [
     { key: 'nomina', label: 'Nómina', icon: Wallet2 },
     { key: 'alcaldia', label: 'Alcaldía / Convenio', icon: Landmark },
     { key: 'gastos', label: 'Gastos Operativos', icon: Receipt },
-    { key: 'mercadopago', label: 'Mercado Pago', icon: CreditCard },
     { key: 'reporte', label: 'Reporte', icon: FileBarChart2 },
     ...(esSuperadmin ? [{ key: 'declaraciones' as TabKey, label: 'Declaraciones SAT', icon: ShieldCheck }] : []),
   ]
@@ -65,7 +62,7 @@ export default function Finanzas() {
           <h1 className="text-2xl font-semibold text-white">Control Financiero — Deportivo Morelos</h1>
           <p className="text-sm text-gray-400 mt-1">
             Nómina, pagos a alcaldía, gastos operativos y utilidad mensual. Visible solo para superadministrador y
-            administrador.
+            administrador. La comisión de tarjeta se calcula automáticamente en Inscripciones/Renovaciones.
           </p>
         </div>
         <PeriodSelector />
@@ -106,14 +103,11 @@ export default function Finanzas() {
               anio={anio}
               pago={pagoAlcaldiaDelPeriodo}
               tickets={ticketsDelPago}
-              ingreso={ingreso}
+              convenioPagos={convenioPagosDelPeriodo}
               onChanged={refresh}
             />
           )}
           {tab === 'gastos' && <GastosTab mes={mes} anio={anio} gastos={gastosDelPeriodo} onChanged={refresh} />}
-          {tab === 'mercadopago' && (
-            <MercadoPagoTab mes={mes} anio={anio} cobros={cobrosMpDelPeriodo} onChanged={refresh} />
-          )}
           {tab === 'reporte' && (
             <ReporteTab
               mes={mes}
@@ -123,8 +117,8 @@ export default function Finanzas() {
               nominaMensual={nominaMensual}
               pagosAlcaldia={pagosAlcaldia}
               alcaldiaTickets={alcaldiaTickets}
+              convenioPagos={convenioPagos}
               gastosOperativos={gastosOperativos}
-              mercadoPagoCobros={mercadoPagoCobros}
               ingresosPorPeriodo={ingresosPorPeriodo}
             />
           )}

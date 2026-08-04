@@ -188,13 +188,39 @@ export interface NominaMensual extends ComprobanteCfdi {
   created_at: string
 }
 
+/** Precios fijos del convenio con la Alcaldía (Gaceta DPM Cuajimalpa) por usuario. */
+export const PRECIO_MENSUALIDAD_CONVENIO = 129
+export const PRECIO_INSCRIPCION_CONVENIO = 299
+
+export function calcularMontoConvenio(mensualidadesUsuarios: number, inscripcionesUsuarios: number) {
+  return mensualidadesUsuarios * PRECIO_MENSUALIDAD_CONVENIO + inscripcionesUsuarios * PRECIO_INSCRIPCION_CONVENIO
+}
+
+/** folio_comprobante/comprobante_* (heredados de ComprobanteCfdi) son del CFDI de la RENTA. */
 export interface PagoAlcaldia extends ComprobanteCfdi {
   id: string
   mes: string
   anio: number
+  mensualidades_usuarios: number
+  inscripciones_usuarios: number
   monto_convenio: number
   monto_renta: number
   cfdi_recibido: boolean
+  folio_calculo_convenio: string | null
+  convenio_comprobante_path: string | null
+  convenio_comprobante_iv: string | null
+  convenio_comprobante_salt: string | null
+  convenio_comprobante_mime: string | null
+  created_by: string | null
+  created_at: string
+}
+
+/** Ledger de pagos de convenio realmente efectuados (puede haber varios por periodo). */
+export interface ConvenioPago extends ComprobanteCfdi {
+  id: string
+  mes: string
+  anio: number
+  monto: number
   created_by: string | null
   created_at: string
 }
@@ -207,13 +233,37 @@ export interface AlcaldiaTicket {
   created_at: string
 }
 
-export type CategoriaGasto = 'papeleria' | 'limpieza' | 'internet' | 'mantenimiento' | 'otros'
+export type CategoriaGasto =
+  | 'papeleria'
+  | 'limpieza'
+  | 'internet'
+  | 'mantenimiento'
+  | 'renta_equipo'
+  | 'servicios_basicos'
+  | 'honorarios'
+  | 'publicidad'
+  | 'seguros'
+  | 'equipo_menor'
+  | 'combustibles'
+  | 'capacitacion'
+  | 'software'
+  | 'otros'
 
+/** Categorías de gasto operativo típicamente deducibles ante el SAT. */
 export const CATEGORIA_GASTO_LABEL: Record<CategoriaGasto, string> = {
-  papeleria: 'Papelería',
+  papeleria: 'Papelería y oficina',
   limpieza: 'Limpieza',
-  internet: 'Internet',
-  mantenimiento: 'Mantenimiento',
+  internet: 'Internet y telefonía',
+  mantenimiento: 'Mantenimiento y reparaciones',
+  renta_equipo: 'Renta (espacio/equipo)',
+  servicios_basicos: 'Servicios básicos (luz, agua, gas)',
+  honorarios: 'Honorarios profesionales',
+  publicidad: 'Publicidad y marketing',
+  seguros: 'Seguros',
+  equipo_menor: 'Equipo y herramienta menor',
+  combustibles: 'Combustibles y lubricantes',
+  capacitacion: 'Capacitación',
+  software: 'Software y suscripciones',
   otros: 'Otros',
 }
 
@@ -225,18 +275,6 @@ export interface GastoOperativo extends ComprobanteCfdi {
   descripcion: string | null
   monto: number
   tiene_cfdi: boolean
-  created_by: string | null
-  created_at: string
-}
-
-export interface MercadoPagoCobro {
-  id: string
-  mes: string
-  anio: number
-  fecha: string
-  concepto: string | null
-  monto_bruto: number
-  comision_pct: number
   created_by: string | null
   created_at: string
 }

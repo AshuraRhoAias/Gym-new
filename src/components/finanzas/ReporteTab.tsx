@@ -3,14 +3,14 @@ import { Download, FileSpreadsheet, Printer } from 'lucide-react'
 import { MESES, CATEGORIA_GASTO_LABEL } from '../../types/database'
 import type {
   AlcaldiaTicket,
+  ConvenioPago,
   GastoOperativo,
-  MercadoPagoCobro,
   NominaMensual,
   PagoAlcaldia,
   Trabajador,
 } from '../../types/database'
 import type { IngresoPeriodo } from '../../hooks/useFinanzas'
-import { calcularResumen, exportarExcel, comisionMonto, type ResumenPeriodo } from '../../lib/finanzas'
+import { calcularResumen, exportarExcel, type ResumenPeriodo } from '../../lib/finanzas'
 
 interface Props {
   mes: string
@@ -20,8 +20,8 @@ interface Props {
   nominaMensual: NominaMensual[]
   pagosAlcaldia: PagoAlcaldia[]
   alcaldiaTickets: AlcaldiaTicket[]
+  convenioPagos: ConvenioPago[]
   gastosOperativos: GastoOperativo[]
-  mercadoPagoCobros: MercadoPagoCobro[]
   ingresosPorPeriodo: Map<string, IngresoPeriodo>
 }
 
@@ -37,8 +37,8 @@ export default function ReporteTab({
   nominaMensual,
   pagosAlcaldia,
   alcaldiaTickets,
+  convenioPagos,
   gastosOperativos,
-  mercadoPagoCobros,
   ingresosPorPeriodo,
 }: Props) {
   const historico = useMemo(() => {
@@ -46,7 +46,6 @@ export default function ReporteTab({
     for (const n of nominaMensual) claves.add(`${n.mes}-${n.anio}`)
     for (const p of pagosAlcaldia) claves.add(`${p.mes}-${p.anio}`)
     for (const g of gastosOperativos) claves.add(`${g.mes}-${g.anio}`)
-    for (const c of mercadoPagoCobros) claves.add(`${c.mes}-${c.anio}`)
     for (const key of ingresosPorPeriodo.keys()) claves.add(key)
 
     const periodos = Array.from(claves).map((key) => {
@@ -63,11 +62,10 @@ export default function ReporteTab({
         pagoAlcaldia: pago,
         ticketsDelPago: alcaldiaTickets.filter((t) => t.pago_alcaldia_id === pago?.id),
         gastosDelPeriodo: gastosOperativos.filter((x) => x.mes === p.mes && x.anio === p.anio),
-        cobrosMpDelPeriodo: mercadoPagoCobros.filter((x) => x.mes === p.mes && x.anio === p.anio),
       })
       return { ...p, ...r }
     })
-  }, [nominaMensual, pagosAlcaldia, alcaldiaTickets, gastosOperativos, mercadoPagoCobros, ingresosPorPeriodo])
+  }, [nominaMensual, pagosAlcaldia, alcaldiaTickets, gastosOperativos, ingresosPorPeriodo])
 
   const maxUtilidad = Math.max(1, ...historico.map((h) => Math.abs(h.utilidadNeta)))
 
@@ -92,18 +90,13 @@ export default function ReporteTab({
         Categoría: CATEGORIA_GASTO_LABEL[g.categoria],
         Descripción: g.descripcion ?? '',
         Monto: g.monto,
+        Folio: g.folio_comprobante ?? '',
         CFDI: g.tiene_cfdi ? 'Sí' : 'No',
       }))
 
-    const mpFilas = mercadoPagoCobros
+    const convenioFilas = convenioPagos
       .filter((c) => c.mes === mes && c.anio === anio)
-      .map((c) => ({
-        Fecha: c.fecha,
-        Concepto: c.concepto ?? '',
-        Bruto: c.monto_bruto,
-        'Comisión %': c.comision_pct,
-        Comisión: comisionMonto(c),
-      }))
+      .map((c) => ({ Mes: c.mes, Monto: c.monto, Folio: c.folio_comprobante ?? '' }))
 
     const resumenFilas = [
       { Concepto: 'Ingresos (tarjeta/transferencia)', Monto: resumen.ingresos },
@@ -111,7 +104,7 @@ export default function ReporteTab({
       { Concepto: 'Convenio Alcaldía', Monto: -resumen.convenio },
       { Concepto: 'Renta Alcaldía', Monto: -resumen.renta },
       { Concepto: 'Gastos operativos', Monto: -resumen.gastos },
-      { Concepto: 'Comisiones Mercado Pago', Monto: -resumen.comisionesMp },
+      { Concepto: 'Comisión tarjeta (Inscripciones/Renovaciones)', Monto: -resumen.comisionTarjeta },
       { Concepto: 'Utilidad bruta', Monto: resumen.utilidadBruta },
       { Concepto: 'Utilidad neta', Monto: resumen.utilidadNeta },
     ]
@@ -120,7 +113,7 @@ export default function ReporteTab({
       { nombre: 'Resumen', filas: resumenFilas },
       { nombre: 'Nómina', filas: nominaFilas },
       { nombre: 'Gastos', filas: gastosFilas },
-      { nombre: 'Mercado Pago', filas: mpFilas },
+      { nombre: 'Pagos de convenio', filas: convenioFilas },
     ])
   }
 
@@ -148,7 +141,7 @@ export default function ReporteTab({
 
       <div className="bg-surface border border-border rounded-xl p-4">
         <h4 className="text-sm font-semibold text-white mb-3">Desglose de gastos por categoría</h4>
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3">
           {Object.entries(CATEGORIA_GASTO_LABEL).map(([v, l]) => (
             <div key={v} className="bg-surface-2 border border-border rounded-lg p-3 text-center">
               <div className="text-white font-semibold">${(gastosPorCategoria.get(v) ?? 0).toFixed(2)}</div>
@@ -197,7 +190,7 @@ export default function ReporteTab({
               <th className="px-2 py-1.5 font-normal">Nómina</th>
               <th className="px-2 py-1.5 font-normal">Alcaldía</th>
               <th className="px-2 py-1.5 font-normal">Gastos</th>
-              <th className="px-2 py-1.5 font-normal">Comisión MP</th>
+              <th className="px-2 py-1.5 font-normal">Comisión tarjeta</th>
               <th className="px-2 py-1.5 font-normal">Utilidad neta</th>
               <th className="px-2 py-1.5 font-normal">Sin comprobante</th>
             </tr>
@@ -212,7 +205,7 @@ export default function ReporteTab({
                 <td className="px-2 py-1.5 text-gray-300">${h.nomina.toFixed(2)}</td>
                 <td className="px-2 py-1.5 text-gray-300">${(h.convenio + h.renta).toFixed(2)}</td>
                 <td className="px-2 py-1.5 text-gray-300">${h.gastos.toFixed(2)}</td>
-                <td className="px-2 py-1.5 text-gray-300">${h.comisionesMp.toFixed(2)}</td>
+                <td className="px-2 py-1.5 text-gray-300">${h.comisionTarjeta.toFixed(2)}</td>
                 <td className={`px-2 py-1.5 ${h.utilidadNeta < 0 ? 'text-danger' : 'text-accent'}`}>
                   ${h.utilidadNeta.toFixed(2)}
                 </td>
