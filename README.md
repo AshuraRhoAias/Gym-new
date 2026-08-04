@@ -26,7 +26,8 @@ Implementado y funcional:
 - Faltan: gestión de documentos faltantes por persona
 - Enum: reportes con folio/sin folio y cálculo de saldo (monto − autogenerado)
 - Cifrado de campos sensibles (ver sección dedicada abajo) y QR de acceso cifrado por cada
-  inscripción/renovación nueva, con botón para compartirlo por WhatsApp
+  inscripción/renovación nueva, con envío automático por WhatsApp validando primero que el
+  número (+52 o +521) tenga cuenta activa — ver `whatsapp-service/README.md`
 - Roles y permisos (superadmin/admin/editor/viewer), auditoría de cambios y gestión de cuentas
   (ver sección dedicada abajo)
 - Expediente por registro (botón 📁 en el Dashboard): adjuntar foto/archivo cifrado por cada
@@ -39,6 +40,21 @@ Implementado y funcional:
 
 Pendiente: envío masivo de "Hoja Rosa" por WhatsApp (visto en las capturas de referencia) y
 lectura de QR en vivo con cámara (por ahora es por imagen subida) — quedan fuera de este MVP.
+
+## Envío de QR por WhatsApp (`whatsapp-service/`)
+
+Servicio Node.js aparte (no forma parte del build de Vite/Tauri) que mantiene una sesión de
+WhatsApp Web vinculada de forma persistente (librería no oficial
+[Baileys](https://github.com/WhiskeySockets/Baileys)) para:
+
+- Validar si un número mexicano tiene cuenta de WhatsApp activa (acepta `+52` o `+521`).
+- Enviar el QR de acceso directamente al chat, sin adjuntarlo a mano.
+
+Debe correr siempre en paralelo a la app (`cd whatsapp-service && npm install && npm start`).
+La primera vez pide escanear un QR desde la terminal; la sesión queda guardada y se reconecta
+sola. Si se llega a desconectar, la app web muestra un modal con el QR actualizado para
+revincular. Detalles, riesgos (no es la API oficial de Meta) y endpoints en
+`whatsapp-service/README.md`.
 
 ## Expediente: documentos adjuntos y firmas digitales
 

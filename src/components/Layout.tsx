@@ -2,6 +2,7 @@ import { Outlet } from 'react-router-dom'
 import Navbar from './Navbar'
 import GlobalFolioSearch from './GlobalFolioSearch'
 import PrivacyToggleButton from './PrivacyToggleButton'
+import WhatsAppStatusModal from './WhatsAppStatusModal'
 
 export default function Layout() {
   return (
@@ -15,6 +16,7 @@ export default function Layout() {
       <div className="print:hidden">
         <GlobalFolioSearch />
         <PrivacyToggleButton />
+        <WhatsAppStatusModal />
       </div>
     </div>
   )
