@@ -12,11 +12,33 @@ Mantiene una sesión de WhatsApp Web vinculada de forma persistente para:
 > WhatsApp detecta un patrón de uso automatizado. Úsalo con un número que no
 > sea crítico o acepta ese riesgo de forma consciente.
 
+## Se activa junto con la app
+
+Ya no hace falta iniciarlo a mano en casos comunes:
+
+- **App de escritorio (Tauri)**: al abrir GymTech (`npm run tauri:dev` o el `.exe`/`.app`
+  instalado), el backend de Rust lanza automáticamente `whatsapp-service` como proceso hijo y lo
+  cierra cuando cierras la app. Solo necesita tener `node` instalado y accesible en el `PATH`.
+- **Solo navegador, sin Tauri**: usa `npm run dev:web` en vez de `npm run dev` — levanta Vite y
+  este servicio juntos (con `concurrently`).
+
+Si por algo el arranque automático falla (Node no instalado, etc.), la app no se cae: el modal de
+WhatsApp de la web simplemente queda en "desconectado" hasta iniciarlo a mano con los pasos de
+abajo.
+
 ## Cómo vincularlo (primera vez)
+
+Requiere `node` instalado y, la primera vez, instalar dependencias:
 
 ```bash
 cd whatsapp-service
 npm install
+```
+
+Después, cualquiera de los métodos de arriba lo inicia solo. Para iniciarlo manualmente (por
+ejemplo si el arranque automático falló, o para probarlo aislado):
+
+```bash
 npm start
 ```
 
@@ -30,6 +52,15 @@ Mientras ese proceso siga corriendo, la sesión permanece activa: se
 reconecta solo ante cortes de red o reinicios de WhatsApp, sin pedir un QR
 nuevo. Solo se vuelve a pedir QR si la sesión se cierra desde el celular
 (cerrar sesión del dispositivo vinculado) o se borra `auth/` manualmente.
+
+### Limitación en builds instalados (producción)
+
+El instalador de escritorio (`tauri:build`) empaqueta el código de `whatsapp-service/` (sin
+`node_modules`, para no inflar el instalador) y lo lanza igual al abrir la app. Pero como
+`node_modules` no viaja en el paquete, la primera vez en una máquina nueva hay que entrar a la
+carpeta `whatsapp-service` que quedó junto al ejecutable instalado y correr `npm install` una
+sola vez ahí (además de tener Node.js instalado en esa máquina). Mientras tanto, la app funciona
+normal y el envío de QR simplemente cae al enlace manual de WhatsApp.
 
 ## Dejarlo siempre corriendo
 
