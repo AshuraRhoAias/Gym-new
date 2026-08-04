@@ -3,9 +3,12 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "workspaces": [
+    "whatsapp-service"
+  ],
   "scripts": {
-    "dev": "vite",
-    "dev:web": "concurrently -n vite,whatsapp -c blue,green \"vite\" \"npm --prefix whatsapp-service start\"",
+    "dev": "concurrently -n vite,whatsapp -c blue,green \"vite\" \"npm run start -w whatsapp-service\"",
+    "dev:web": "npm run dev",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview",
@@ -22,13 +25,13 @@
   "dependencies": {
     "@supabase/supabase-js": "^2.111.0",
     "@tauri-apps/api": "^2.11.1",
+    "exceljs": "^4.4.0",
     "jsqr": "^1.4.0",
     "lucide-react": "^1.27.0",
     "qrcode": "^1.5.4",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
-    "react-router-dom": "^7.18.2",
-    "xlsx": "^0.18.5"
+    "react-router-dom": "^7.18.2"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.3",
@@ -44,5 +47,8 @@
     "tailwindcss": "^4.3.3",
     "typescript": "~6.0.2",
     "vite": "^8.1.1"
+  },
+  "overrides": {
+    "uuid": "^11.1.1"
   }
 }

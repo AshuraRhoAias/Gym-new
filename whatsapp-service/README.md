@@ -12,15 +12,26 @@ Mantiene una sesión de WhatsApp Web vinculada de forma persistente para:
 > WhatsApp detecta un patrón de uso automatizado. Úsalo con un número que no
 > sea crítico o acepta ese riesgo de forma consciente.
 
+## Es parte del proyecto (npm workspaces)
+
+`whatsapp-service/` es un **workspace** del `package.json` de la raíz: un solo
+`npm install` en la raíz del repo instala también sus dependencias (Express,
+Baileys, etc.), sin pasos aparte.
+
 ## Se activa junto con la app
 
-Ya no hace falta iniciarlo a mano en casos comunes:
+No hace falta iniciarlo a mano en casos comunes:
 
-- **App de escritorio (Tauri)**: al abrir GymTech (`npm run tauri:dev` o el `.exe`/`.app`
-  instalado), el backend de Rust lanza automáticamente `whatsapp-service` como proceso hijo y lo
-  cierra cuando cierras la app. Solo necesita tener `node` instalado y accesible en el `PATH`.
-- **Solo navegador, sin Tauri**: usa `npm run dev:web` en vez de `npm run dev` — levanta Vite y
-  este servicio juntos (con `concurrently`).
+- **Cualquier `npm run dev`** (desde la raíz del proyecto): levanta Vite y
+  `whatsapp-service` juntos (con `concurrently`). `npm run dev:web` es un
+  alias del mismo comando.
+- **App de escritorio (Tauri)**: `npm run tauri:dev` ejecuta `npm run dev`
+  como paso previo (ya incluye whatsapp-service) y, además, el backend de
+  Rust también lo lanza como proceso hijo al abrir la ventana y lo cierra al
+  salir — así queda cubierto también al abrir el `.exe`/`.app` ya instalado,
+  sin pasar por `npm run dev`. Si ambos intentan iniciarlo a la vez, el
+  segundo detecta el puerto ya ocupado y se cierra solo (no se duplican
+  sesiones). Solo necesita tener `node` instalado y accesible en el `PATH`.
 
 Si por algo el arranque automático falla (Node no instalado, etc.), la app no se cae: el modal de
 WhatsApp de la web simplemente queda en "desconectado" hasta iniciarlo a mano con los pasos de
@@ -28,18 +39,13 @@ abajo.
 
 ## Cómo vincularlo (primera vez)
 
-Requiere `node` instalado y, la primera vez, instalar dependencias:
-
-```bash
-cd whatsapp-service
-npm install
-```
-
-Después, cualquiera de los métodos de arriba lo inicia solo. Para iniciarlo manualmente (por
+Requiere `node` instalado. Si ya corriste `npm install` en la raíz del proyecto, las
+dependencias de este servicio ya están instaladas (ver arriba). Cualquiera de los
+comandos de la sección anterior lo inicia solo. Para iniciarlo manualmente (por
 ejemplo si el arranque automático falló, o para probarlo aislado):
 
 ```bash
-npm start
+npm run start -w whatsapp-service
 ```
 
 En la terminal aparecerá un código QR. Ábrelo desde el celular del gimnasio:
