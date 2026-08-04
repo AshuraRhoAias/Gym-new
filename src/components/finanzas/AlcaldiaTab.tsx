@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { Landmark, Plus, Trash2 } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
+import ComprobanteCfdiField from '../ComprobanteCfdiField'
 import type { AlcaldiaTicket, PagoAlcaldia } from '../../types/database'
 import type { IngresoPeriodo } from '../../hooks/useFinanzas'
 
@@ -82,6 +83,12 @@ export default function AlcaldiaTab({
     onChanged()
   }
 
+  const updateComprobante = async (patch: Partial<PagoAlcaldia>) => {
+    if (!pago) return
+    await supabase.from('pagos_alcaldia').update(patch).eq('id', pago.id)
+    onChanged()
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <form onSubmit={handleGuardar} className="bg-surface border border-border rounded-xl p-4 flex flex-col gap-3">
@@ -127,6 +134,23 @@ export default function AlcaldiaTab({
       </form>
 
       {error && <p className="text-sm text-danger bg-danger/10 border border-danger/30 rounded-lg px-3 py-2">{error}</p>}
+
+      {pago && cfdi && (
+        <div className="bg-surface border border-border rounded-xl p-4">
+          <h3 className="text-sm font-semibold text-white mb-2">Comprobante (folio y foto/PDF) para validar ante el SAT</h3>
+          <ComprobanteCfdiField
+            folio={pago.folio_comprobante ?? ''}
+            onFolioChange={(v) => updateComprobante({ folio_comprobante: v || null })}
+            comprobante={{
+              comprobante_path: pago.comprobante_path,
+              comprobante_iv: pago.comprobante_iv,
+              comprobante_salt: pago.comprobante_salt,
+              comprobante_mime: pago.comprobante_mime,
+            }}
+            onComprobanteChange={(v) => updateComprobante(v)}
+          />
+        </div>
+      )}
 
       {pago && !cfdi && (
         <div className="bg-surface border border-border rounded-xl overflow-hidden">

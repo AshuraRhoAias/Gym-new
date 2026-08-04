@@ -41,6 +41,10 @@ interface FormState {
   anio: number
   forma_pago: PaymentMethod
   monto: string
+  pago1FormaPago: PaymentMethod
+  pago1Monto: string
+  pago2FormaPago: PaymentMethod
+  pago2Monto: string
   saldoPendiente: string
   estatus: RecordStatus
   horario: string
@@ -58,6 +62,10 @@ const emptyState = (mes: string, anio: number): FormState => ({
   anio,
   forma_pago: 'efectivo',
   monto: '',
+  pago1FormaPago: 'efectivo',
+  pago1Monto: '',
+  pago2FormaPago: 'efectivo',
+  pago2Monto: '',
   saldoPendiente: '',
   estatus: 'pendiente',
   horario: '',
@@ -81,6 +89,10 @@ export default function RegistroForm({ kind, initial, prefill, onClose, onSaved,
         anio: initial.anio,
         forma_pago: initial.forma_pago,
         monto: String(initial.monto ?? ''),
+        pago1FormaPago: initial.pago1_forma_pago ?? 'efectivo',
+        pago1Monto: initial.pago1_monto != null ? String(initial.pago1_monto) : '',
+        pago2FormaPago: initial.pago2_forma_pago ?? 'efectivo',
+        pago2Monto: initial.pago2_monto != null ? String(initial.pago2_monto) : '',
         saldoPendiente: initial.saldo_pendiente != null ? String(initial.saldo_pendiente) : '',
         estatus: initial.estatus,
         horario: initial.horario ?? '',
@@ -203,14 +215,35 @@ export default function RegistroForm({ kind, initial, prefill, onClose, onSaved,
     // omite la clave (se conserva el valor existente); al crear se guarda 0
     // y queda pendiente de que un admin/superadmin lo capture.
     if (moneyVisible) {
-      const monto = Number(form.monto) || 0
-      payload.monto = monto
-      payload.comision_tarjeta = form.forma_pago === 'tarjeta' && monto > 0 ? calcularComisionTarjeta(monto) : null
+      if (form.forma_pago === 'dos_pagos') {
+        const pago1Monto = Number(form.pago1Monto) || 0
+        const pago2Monto = Number(form.pago2Monto) || 0
+        payload.monto = pago1Monto + pago2Monto
+        payload.pago1_forma_pago = form.pago1FormaPago
+        payload.pago1_monto = pago1Monto
+        payload.pago2_forma_pago = form.pago2FormaPago
+        payload.pago2_monto = pago2Monto
+        payload.comision_tarjeta =
+          (form.pago1FormaPago === 'tarjeta' && pago1Monto > 0 ? calcularComisionTarjeta(pago1Monto) : 0) +
+          (form.pago2FormaPago === 'tarjeta' && pago2Monto > 0 ? calcularComisionTarjeta(pago2Monto) : 0) || null
+      } else {
+        const monto = Number(form.monto) || 0
+        payload.monto = monto
+        payload.comision_tarjeta = form.forma_pago === 'tarjeta' && monto > 0 ? calcularComisionTarjeta(monto) : null
+        payload.pago1_forma_pago = null
+        payload.pago1_monto = null
+        payload.pago2_forma_pago = null
+        payload.pago2_monto = null
+      }
       payload.saldo_pendiente = form.saldoPendiente.trim() ? Number(form.saldoPendiente) : null
     } else if (!initial) {
       payload.monto = 0
       payload.comision_tarjeta = null
       payload.saldo_pendiente = null
+      payload.pago1_forma_pago = null
+      payload.pago1_monto = null
+      payload.pago2_forma_pago = null
+      payload.pago2_monto = null
     }
 
     const registroId = registroIdRef.current
@@ -340,7 +373,7 @@ export default function RegistroForm({ kind, initial, prefill, onClose, onSaved,
             <option value="otro">Otro</option>
           </select>
         </div>
-        {moneyVisible && (
+        {moneyVisible && form.forma_pago !== 'dos_pagos' && (
           <div>
             <TextField label="Monto" type="number" value={form.monto} onChange={(v) => update('monto', v)} placeholder="Ingrese el monto" />
             {form.forma_pago === 'tarjeta' && Number(form.monto) > 0 && (
@@ -351,6 +384,40 @@ export default function RegistroForm({ kind, initial, prefill, onClose, onSaved,
                 </span>
               </p>
             )}
+          </div>
+        )}
+        {moneyVisible && form.forma_pago === 'dos_pagos' && (
+          <div className="sm:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4 bg-surface-2/50 border border-border rounded-lg p-3">
+            {(['pago1', 'pago2'] as const).map((pago, i) => {
+              const formaKey = pago === 'pago1' ? 'pago1FormaPago' : 'pago2FormaPago'
+              const montoKey = pago === 'pago1' ? 'pago1Monto' : 'pago2Monto'
+              const formaValue = form[formaKey]
+              const montoValue = form[montoKey]
+              return (
+                <div key={pago} className="flex flex-col gap-2">
+                  <span className="text-xs text-gray-400">Pago {i + 1}</span>
+                  <select
+                    value={formaValue}
+                    onChange={(e) => update(formaKey, e.target.value as PaymentMethod)}
+                    className="w-full bg-surface-2 border border-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-accent"
+                  >
+                    <option value="efectivo">Efectivo</option>
+                    <option value="tarjeta">Tarjeta</option>
+                    <option value="transferencia">Transferencia</option>
+                    <option value="otro">Otro</option>
+                  </select>
+                  <TextField label="" value={montoValue} type="number" onChange={(v) => update(montoKey, v)} placeholder="Monto" />
+                  {formaValue === 'tarjeta' && Number(montoValue) > 0 && (
+                    <p className="text-xs text-warning">
+                      Comisión ({COMISION_TARJETA_PCT}%): -${calcularComisionTarjeta(Number(montoValue)).toFixed(2)}
+                    </p>
+                  )}
+                </div>
+              )
+            })}
+            <p className="sm:col-span-2 text-xs text-gray-400">
+              Total: ${((Number(form.pago1Monto) || 0) + (Number(form.pago2Monto) || 0)).toFixed(2)}
+            </p>
           </div>
         )}
         {moneyVisible && (

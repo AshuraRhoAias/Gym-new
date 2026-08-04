@@ -50,6 +50,11 @@ export interface Registro {
   comision_tarjeta: number | null
   /** Monto que aún debe el socio (ej. con forma_pago = 'dos_pagos'); null si no aplica o sin permiso de ver montos. */
   saldo_pendiente: number | null
+  /** Detalle de cada pago cuando forma_pago = 'dos_pagos'; null si no aplica o sin permiso de ver montos. */
+  pago1_forma_pago: PaymentMethod | null
+  pago1_monto: number | null
+  pago2_forma_pago: PaymentMethod | null
+  pago2_monto: number | null
   estatus: RecordStatus
   horario: string | null
   fecha_ingreso: string | null
@@ -163,7 +168,16 @@ export interface CajaMovimiento {
   fecha: string
 }
 
-export interface NominaMensual {
+/** Folio del ticket/CFDI y comprobante (foto/PDF cifrado) para validar ante el SAT. */
+export interface ComprobanteCfdi {
+  folio_comprobante: string | null
+  comprobante_path: string | null
+  comprobante_iv: string | null
+  comprobante_salt: string | null
+  comprobante_mime: string | null
+}
+
+export interface NominaMensual extends ComprobanteCfdi {
   id: string
   trabajador_id: string
   mes: string
@@ -174,7 +188,7 @@ export interface NominaMensual {
   created_at: string
 }
 
-export interface PagoAlcaldia {
+export interface PagoAlcaldia extends ComprobanteCfdi {
   id: string
   mes: string
   anio: number
@@ -203,7 +217,7 @@ export const CATEGORIA_GASTO_LABEL: Record<CategoriaGasto, string> = {
   otros: 'Otros',
 }
 
-export interface GastoOperativo {
+export interface GastoOperativo extends ComprobanteCfdi {
   id: string
   mes: string
   anio: number

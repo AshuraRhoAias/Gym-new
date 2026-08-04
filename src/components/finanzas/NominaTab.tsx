@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { UserPlus, RefreshCw } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
+import ComprobanteCfdiField from '../ComprobanteCfdiField'
 import { TURNO_LABEL, type NominaMensual, type Trabajador, type Turno } from '../../types/database'
 
 export default function NominaTab({
@@ -234,12 +235,12 @@ export default function NominaTab({
           </button>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-sm min-w-[600px]">
+          <table className="w-full text-sm min-w-[750px]">
             <thead>
               <tr className="text-left text-gray-500 border-b border-border">
                 <th className="px-4 py-2 font-normal">Empleado</th>
                 <th className="px-4 py-2 font-normal">Monto</th>
-                <th className="px-4 py-2 font-normal">Timbrado (CFDI nómina)</th>
+                <th className="px-4 py-2 font-normal">Timbrado / comprobante (para el SAT)</th>
               </tr>
             </thead>
             <tbody>
@@ -258,7 +259,7 @@ export default function NominaTab({
                       />
                     </td>
                     <td className="px-4 py-2">
-                      <label className="flex items-center gap-1.5 text-xs text-gray-300">
+                      <label className="flex items-center gap-1.5 text-xs text-gray-300 mb-1.5">
                         <input
                           type="checkbox"
                           checked={n.timbrado}
@@ -266,6 +267,19 @@ export default function NominaTab({
                         />
                         {n.timbrado ? 'Sí' : 'No'}
                       </label>
+                      {n.timbrado && (
+                        <ComprobanteCfdiField
+                          folio={n.folio_comprobante ?? ''}
+                          onFolioChange={(v) => updateNomina(n.id, { folio_comprobante: v || null })}
+                          comprobante={{
+                            comprobante_path: n.comprobante_path,
+                            comprobante_iv: n.comprobante_iv,
+                            comprobante_salt: n.comprobante_salt,
+                            comprobante_mime: n.comprobante_mime,
+                          }}
+                          onComprobanteChange={(v) => updateNomina(n.id, v)}
+                        />
+                      )}
                     </td>
                   </tr>
                 )

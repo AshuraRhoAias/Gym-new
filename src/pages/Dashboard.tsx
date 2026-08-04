@@ -276,6 +276,18 @@ export default function Dashboard() {
             <Field label="Estatus" value={<StatusBadge status={detail.estatus} />} />
             <Field label="Forma de pago" value={PAGO_LABEL[detail.forma_pago]} />
             <Field label="Monto" value={detail.monto === null ? 'Oculto para tu rol' : `$${detail.monto.toFixed(2)}`} />
+            {detail.pago1_monto != null && (
+              <Field
+                label="Pago 1"
+                value={`${PAGO_LABEL[detail.pago1_forma_pago ?? 'efectivo']} — $${detail.pago1_monto.toFixed(2)}`}
+              />
+            )}
+            {detail.pago2_monto != null && (
+              <Field
+                label="Pago 2"
+                value={`${PAGO_LABEL[detail.pago2_forma_pago ?? 'efectivo']} — $${detail.pago2_monto.toFixed(2)}`}
+              />
+            )}
             {detail.comision_tarjeta != null && detail.monto != null && (
               <>
                 <Field label="Comisión tarjeta (4.06%)" value={`-$${detail.comision_tarjeta.toFixed(2)}`} />
