@@ -15,6 +15,7 @@ export type PaymentMethod =
   | 'efectivo'
   | 'tarjeta'
   | 'transferencia'
+  | 'dos_pagos'
   | 'otro'
   | 'sin_metodo'
 
@@ -37,6 +38,8 @@ export interface Registro {
   kind: RecordKind
   nombre: string
   folio: string | null
+  /** Folio que tenía el socio antes de esta renovación (referencia histórica, se llena al buscar en Renovaciones). */
+  folio_anterior: string | null
   mes: string
   anio: number
   forma_pago: PaymentMethod
@@ -45,6 +48,8 @@ export interface Registro {
   autogenerado: number | null
   /** Comisión automática (4.06%) cuando forma_pago = 'tarjeta'; null en otros métodos o sin permiso de ver montos. */
   comision_tarjeta: number | null
+  /** Monto que aún debe el socio (ej. con forma_pago = 'dos_pagos'); null si no aplica o sin permiso de ver montos. */
+  saldo_pendiente: number | null
   estatus: RecordStatus
   horario: string | null
   fecha_ingreso: string | null
@@ -262,6 +267,7 @@ export const PAGO_LABEL: Record<PaymentMethod, string> = {
   efectivo: 'Efectivo',
   tarjeta: 'Tarjeta',
   transferencia: 'Transferencia',
+  dos_pagos: '2 Pagos',
   otro: 'Otro',
   sin_metodo: 'Sin método',
 }

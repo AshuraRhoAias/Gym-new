@@ -26,7 +26,7 @@ interface RegistroFormProps {
   /** Registro existente a editar (actualiza en vez de insertar). */
   initial?: Registro
   /** Datos para precargar un registro NUEVO (ej. nombre/teléfono encontrados al buscar). */
-  prefill?: Partial<Pick<Registro, 'nombre' | 'telefono' | 'folio'>>
+  prefill?: Partial<Pick<Registro, 'nombre' | 'telefono' | 'folio' | 'folio_anterior'>>
   onClose: () => void
   onSaved: () => void
   /** Cuando es true se renderiza como tarjeta embebida en la página en vez de modal. */
@@ -36,10 +36,12 @@ interface RegistroFormProps {
 interface FormState {
   nombre: string
   folio: string
+  folioAnterior: string
   mes: string
   anio: number
   forma_pago: PaymentMethod
   monto: string
+  saldoPendiente: string
   estatus: RecordStatus
   horario: string
   fecha_ingreso: string
@@ -51,10 +53,12 @@ interface FormState {
 const emptyState = (mes: string, anio: number): FormState => ({
   nombre: '',
   folio: '',
+  folioAnterior: '',
   mes,
   anio,
   forma_pago: 'efectivo',
   monto: '',
+  saldoPendiente: '',
   estatus: 'pendiente',
   horario: '',
   fecha_ingreso: '',
@@ -72,10 +76,12 @@ export default function RegistroForm({ kind, initial, prefill, onClose, onSaved,
       return {
         nombre: initial.nombre,
         folio: initial.folio ?? '',
+        folioAnterior: initial.folio_anterior ?? '',
         mes: initial.mes,
         anio: initial.anio,
         forma_pago: initial.forma_pago,
         monto: String(initial.monto ?? ''),
+        saldoPendiente: initial.saldo_pendiente != null ? String(initial.saldo_pendiente) : '',
         estatus: initial.estatus,
         horario: initial.horario ?? '',
         fecha_ingreso: initial.fecha_ingreso ? initial.fecha_ingreso.slice(0, 16) : '',
@@ -90,6 +96,7 @@ export default function RegistroForm({ kind, initial, prefill, onClose, onSaved,
       nombre: prefill?.nombre ?? '',
       telefono: prefill?.telefono ?? '',
       folio: prefill?.folio ?? '',
+      folioAnterior: prefill?.folio_anterior ?? prefill?.folio ?? '',
     }
   })
   // Id fijo desde el primer render: se usa como registro_id para los
@@ -176,6 +183,7 @@ export default function RegistroForm({ kind, initial, prefill, onClose, onSaved,
       kind,
       nombre: form.nombre.trim(),
       folio: form.folio.trim() || '0',
+      folio_anterior: form.folioAnterior.trim() || null,
       mes: form.mes,
       anio: form.anio,
       forma_pago: form.forma_pago,
@@ -198,9 +206,11 @@ export default function RegistroForm({ kind, initial, prefill, onClose, onSaved,
       const monto = Number(form.monto) || 0
       payload.monto = monto
       payload.comision_tarjeta = form.forma_pago === 'tarjeta' && monto > 0 ? calcularComisionTarjeta(monto) : null
+      payload.saldo_pendiente = form.saldoPendiente.trim() ? Number(form.saldoPendiente) : null
     } else if (!initial) {
       payload.monto = 0
       payload.comision_tarjeta = null
+      payload.saldo_pendiente = null
     }
 
     const registroId = registroIdRef.current
@@ -286,6 +296,15 @@ export default function RegistroForm({ kind, initial, prefill, onClose, onSaved,
         <TextField label="Nombre *" value={form.nombre} onChange={(v) => update('nombre', v)} required />
         <TextField label="Folio" value={form.folio} onChange={(v) => update('folio', v)} />
 
+        {(kind === 'renovacion' || kind === 'renovacion_bacho') && (
+          <TextField
+            label="Folio anterior"
+            value={form.folioAnterior}
+            onChange={(v) => update('folioAnterior', v)}
+            placeholder="Folio que tenía antes de renovar"
+          />
+        )}
+
         <div>
           <label className="block text-xs text-gray-400 mb-1.5">Mes</label>
           <select
@@ -317,6 +336,7 @@ export default function RegistroForm({ kind, initial, prefill, onClose, onSaved,
             <option value="efectivo">Efectivo</option>
             <option value="tarjeta">Tarjeta</option>
             <option value="transferencia">Transferencia</option>
+            <option value="dos_pagos">2 Pagos</option>
             <option value="otro">Otro</option>
           </select>
         </div>
@@ -332,6 +352,15 @@ export default function RegistroForm({ kind, initial, prefill, onClose, onSaved,
               </p>
             )}
           </div>
+        )}
+        {moneyVisible && (
+          <TextField
+            label="Saldo pendiente"
+            type="number"
+            value={form.saldoPendiente}
+            onChange={(v) => update('saldoPendiente', v)}
+            placeholder={form.forma_pago === 'dos_pagos' ? 'Monto que falta por pagar' : 'Dejar vacío si no debe nada'}
+          />
         )}
 
         <div>
