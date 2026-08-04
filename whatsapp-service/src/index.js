@@ -72,12 +72,6 @@ async function iniciarSesion() {
   })
 }
 
-iniciarSesion().catch((err) => {
-  console.error('[whatsapp] Error iniciando sesión, reintentando en 5s:', err)
-  connecting = false
-  setTimeout(iniciarSesion, 5000)
-})
-
 const app = express()
 app.use(cors())
 app.use(express.json({ limit: '15mb' }))
@@ -142,6 +136,29 @@ app.delete('/session', async (_req, res) => {
   res.json({ success: true })
 })
 
-app.listen(PORT, () => {
+// Se enlaza el puerto ANTES de iniciar la sesión de WhatsApp: si algo más
+// (otra instancia lanzada por Tauri, por `npm run dev`, etc.) ya lo tiene
+// ocupado, esta instancia se retira en silencio en vez de arrancar una
+// segunda sesión de Baileys en paralelo.
+const server = app.listen(PORT)
+
+server.on('listening', () => {
   console.log(`[whatsapp] Servicio escuchando en http://localhost:${PORT}`)
+  iniciarSesion().catch((err) => {
+    console.error('[whatsapp] Error iniciando sesión, reintentando en 5s:', err)
+    connecting = false
+    setTimeout(iniciarSesion, 5000)
+  })
+})
+
+server.on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    console.log(
+      `[whatsapp] Ya hay una instancia de whatsapp-service corriendo en el puerto ${PORT}. ` +
+        'No se inicia una sesión duplicada; esta copia se cierra.',
+    )
+    process.exit(0)
+  }
+  console.error('[whatsapp] Error al iniciar el servidor:', err)
+  process.exit(1)
 })

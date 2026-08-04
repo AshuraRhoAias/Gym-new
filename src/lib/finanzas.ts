@@ -57,11 +57,23 @@ export function calcularResumen(params: {
 
 /** Exporta filas de un reporte a un archivo .xlsx descargable. */
 export async function exportarExcel(nombreArchivo: string, hojas: { nombre: string; filas: Record<string, unknown>[] }[]) {
-  const XLSX = await import('xlsx')
-  const wb = XLSX.utils.book_new()
+  const { Workbook } = await import('exceljs')
+  const wb = new Workbook()
   for (const hoja of hojas) {
-    const ws = XLSX.utils.json_to_sheet(hoja.filas)
-    XLSX.utils.book_append_sheet(wb, ws, hoja.nombre.slice(0, 31))
+    const ws = wb.addWorksheet(hoja.nombre.slice(0, 31))
+    if (hoja.filas.length > 0) {
+      ws.columns = Object.keys(hoja.filas[0]).map((key) => ({ header: key, key }))
+      ws.addRows(hoja.filas)
+    }
   }
-  XLSX.writeFile(wb, nombreArchivo)
+  const buffer = await wb.xlsx.writeBuffer()
+  const blob = new Blob([buffer], {
+    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = nombreArchivo
+  a.click()
+  URL.revokeObjectURL(url)
 }

@@ -50,11 +50,12 @@ WhatsApp Web vinculada de forma persistente (librería no oficial
 - Validar si un número mexicano tiene cuenta de WhatsApp activa (acepta `+52` o `+521`).
 - Enviar el QR de acceso directamente al chat, sin adjuntarlo a mano.
 
-Debe correr siempre en paralelo a la app (`cd whatsapp-service && npm install && npm start`).
-La primera vez pide escanear un QR desde la terminal; la sesión queda guardada y se reconecta
-sola. Si se llega a desconectar, la app web muestra un modal con el QR actualizado para
-revincular. Detalles, riesgos (no es la API oficial de Meta) y endpoints en
-`whatsapp-service/README.md`.
+Es un workspace de npm: `npm install` en la raíz ya instala sus dependencias. Arranca solo con
+`npm run dev` (o `npm run tauri:dev`, que además lo lanza como proceso hijo desde Rust al abrir
+la app de escritorio) — no requiere pasos aparte. La primera vez pide escanear un QR desde la
+terminal; la sesión queda guardada y se reconecta sola. Si se llega a desconectar, la app web
+muestra un modal con el QR actualizado para revincular. Detalles, riesgos (no es la API oficial
+de Meta) y endpoints en `whatsapp-service/README.md`.
 
 ## Expediente: documentos adjuntos y firmas digitales
 
