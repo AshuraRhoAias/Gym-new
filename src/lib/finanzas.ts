@@ -1,19 +1,5 @@
-import type {
-  AlcaldiaTicket,
-  GastoOperativo,
-  MercadoPagoCobro,
-  NominaMensual,
-  PagoAlcaldia,
-} from '../types/database'
+import type { AlcaldiaTicket, GastoOperativo, NominaMensual, PagoAlcaldia } from '../types/database'
 import type { IngresoPeriodo } from '../hooks/useFinanzas'
-
-export function comisionMonto(cobro: Pick<MercadoPagoCobro, 'monto_bruto' | 'comision_pct'>) {
-  return (cobro.monto_bruto * cobro.comision_pct) / 100
-}
-
-export function montoNeto(cobro: Pick<MercadoPagoCobro, 'monto_bruto' | 'comision_pct'>) {
-  return cobro.monto_bruto - comisionMonto(cobro)
-}
 
 export interface ResumenPeriodo {
   ingresos: number
@@ -21,7 +7,7 @@ export interface ResumenPeriodo {
   convenio: number
   renta: number
   gastos: number
-  comisionesMp: number
+  comisionTarjeta: number
   utilidadBruta: number
   utilidadNeta: number
   sinComprobante: number
@@ -33,26 +19,26 @@ export function calcularResumen(params: {
   pagoAlcaldia: PagoAlcaldia | undefined
   ticketsDelPago: AlcaldiaTicket[]
   gastosDelPeriodo: GastoOperativo[]
-  cobrosMpDelPeriodo: MercadoPagoCobro[]
 }): ResumenPeriodo {
-  const { ingreso, nominaDelPeriodo, pagoAlcaldia, gastosDelPeriodo, cobrosMpDelPeriodo, ticketsDelPago } = params
+  const { ingreso, nominaDelPeriodo, pagoAlcaldia, gastosDelPeriodo, ticketsDelPago } = params
 
   const ingresos = (ingreso?.tarjeta ?? 0) + (ingreso?.transferencia ?? 0)
   const nomina = nominaDelPeriodo.reduce((s, n) => s + n.monto, 0)
   const convenio = pagoAlcaldia?.monto_convenio ?? 0
   const renta = pagoAlcaldia?.monto_renta ?? 0
   const gastos = gastosDelPeriodo.reduce((s, g) => s + g.monto, 0)
-  const comisionesMp = cobrosMpDelPeriodo.reduce((s, c) => s + comisionMonto(c), 0)
+  // La comisión de tarjeta se genera en Inscripciones/Renovaciones (Dashboard), no aquí.
+  const comisionTarjeta = ingreso?.comisionTarjeta ?? 0
 
   const utilidadBruta = ingresos - nomina - convenio - renta - gastos
-  const utilidadNeta = utilidadBruta - comisionesMp
+  const utilidadNeta = utilidadBruta - comisionTarjeta
 
   const nominaSinTimbrar = nominaDelPeriodo.filter((n) => !n.timbrado).length
   const gastosSinCfdi = gastosDelPeriodo.filter((g) => !g.tiene_cfdi).length
   const alcaldiaSinCfdi = pagoAlcaldia && !pagoAlcaldia.cfdi_recibido && ticketsDelPago.length === 0 ? 1 : 0
   const sinComprobante = nominaSinTimbrar + gastosSinCfdi + alcaldiaSinCfdi
 
-  return { ingresos, nomina, convenio, renta, gastos, comisionesMp, utilidadBruta, utilidadNeta, sinComprobante }
+  return { ingresos, nomina, convenio, renta, gastos, comisionTarjeta, utilidadBruta, utilidadNeta, sinComprobante }
 }
 
 /** Exporta filas de un reporte a un archivo .xlsx descargable. */

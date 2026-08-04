@@ -8,9 +8,9 @@ export default function ResumenCards({ resumen }: { resumen: ResumenPeriodo }) {
       <Card label="Nómina" value={-resumen.nomina} accent="text-danger" />
       <Card label="Convenio + Renta Alcaldía" value={-(resumen.convenio + resumen.renta)} accent="text-danger" />
       <Card label="Gastos operativos" value={-resumen.gastos} accent="text-danger" />
-      <Card label="Comisiones Mercado Pago" value={-resumen.comisionesMp} accent="text-warning" />
+      <Card label="Comisión tarjeta (inscripciones/renovaciones)" value={-resumen.comisionTarjeta} accent="text-warning" />
       <Card label="Utilidad bruta" value={resumen.utilidadBruta} accent="text-info" strong />
-      <Card label="Utilidad neta (tras comisión MP)" value={resumen.utilidadNeta} accent="text-white" strong />
+      <Card label="Utilidad neta" value={resumen.utilidadNeta} accent="text-white" strong />
       <div className="bg-surface border border-border rounded-xl p-4 flex flex-col items-center justify-center text-center">
         <div className="flex items-center gap-1.5 text-warning">
           <AlertTriangle size={18} />

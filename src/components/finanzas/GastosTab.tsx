@@ -115,7 +115,7 @@ export default function GastosTab({
 
       {error && <p className="text-sm text-danger bg-danger/10 border border-danger/30 rounded-lg px-3 py-2">{error}</p>}
 
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3">
         {Object.entries(CATEGORIA_GASTO_LABEL).map(([v, l]) => (
           <div key={v} className="bg-surface border border-border rounded-xl p-3 text-center">
             <div className="text-lg font-bold text-white">${(totalPorCategoria.get(v as CategoriaGasto) ?? 0).toFixed(2)}</div>
