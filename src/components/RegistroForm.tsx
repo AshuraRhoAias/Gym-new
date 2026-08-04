@@ -10,8 +10,10 @@ import EncryptedPhotoField, { type FotoRef } from './EncryptedPhotoField'
 import DocumentoUploadField from './DocumentoUploadField'
 import QrShareCard from './QrShareCard'
 import {
+  COMISION_TARJETA_PCT,
   DOCUMENTOS_REQUERIDOS,
   MESES,
+  calcularComisionTarjeta,
   type DocumentoArchivo,
   type PaymentMethod,
   type RecordKind,
@@ -104,9 +106,13 @@ export default function RegistroForm({ kind, initial, prefill, onClose, onSaved,
   const [saving, setSaving] = useState(false)
   const [decrypting, setDecrypting] = useState(!!initial)
   const [error, setError] = useState<string | null>(null)
-  const [qrPanel, setQrPanel] = useState<{ nombre: string; dataUrl: string; telefono: string | null } | null>(
-    null,
-  )
+  const [qrPanel, setQrPanel] = useState<{
+    nombre: string
+    dataUrl: string
+    telefono: string | null
+    monto: number | null
+    comisionTarjeta: number | null
+  } | null>(null)
 
   useEffect(() => {
     if (!initial) return
@@ -189,9 +195,12 @@ export default function RegistroForm({ kind, initial, prefill, onClose, onSaved,
     // omite la clave (se conserva el valor existente); al crear se guarda 0
     // y queda pendiente de que un admin/superadmin lo capture.
     if (moneyVisible) {
-      payload.monto = Number(form.monto) || 0
+      const monto = Number(form.monto) || 0
+      payload.monto = monto
+      payload.comision_tarjeta = form.forma_pago === 'tarjeta' && monto > 0 ? calcularComisionTarjeta(monto) : null
     } else if (!initial) {
       payload.monto = 0
+      payload.comision_tarjeta = null
     }
 
     const registroId = registroIdRef.current
@@ -235,7 +244,13 @@ export default function RegistroForm({ kind, initial, prefill, onClose, onSaved,
       try {
         const token = await buildQrToken(registroId)
         const dataUrl = await qrToDataUrl(token)
-        setQrPanel({ nombre: form.nombre.trim(), dataUrl, telefono: form.telefono.trim() || null })
+        setQrPanel({
+          nombre: form.nombre.trim(),
+          dataUrl,
+          telefono: form.telefono.trim() || null,
+          monto: (payload.monto as number | undefined) ?? null,
+          comisionTarjeta: (payload.comision_tarjeta as number | null) ?? null,
+        })
         return
       } catch {
         // Si falla la generación del QR no bloqueamos el flujo de guardado.
@@ -250,6 +265,8 @@ export default function RegistroForm({ kind, initial, prefill, onClose, onSaved,
         nombre={qrPanel.nombre}
         dataUrl={qrPanel.dataUrl}
         telefono={qrPanel.telefono}
+        monto={qrPanel.monto}
+        comisionTarjeta={qrPanel.comisionTarjeta}
         onContinue={() => {
           setQrPanel(null)
           onSaved()
@@ -304,7 +321,17 @@ export default function RegistroForm({ kind, initial, prefill, onClose, onSaved,
           </select>
         </div>
         {moneyVisible && (
-          <TextField label="Monto" type="number" value={form.monto} onChange={(v) => update('monto', v)} placeholder="Ingrese el monto" />
+          <div>
+            <TextField label="Monto" type="number" value={form.monto} onChange={(v) => update('monto', v)} placeholder="Ingrese el monto" />
+            {form.forma_pago === 'tarjeta' && Number(form.monto) > 0 && (
+              <p className="text-xs text-warning mt-1.5">
+                Comisión tarjeta ({COMISION_TARJETA_PCT}%): -${calcularComisionTarjeta(Number(form.monto)).toFixed(2)} ·{' '}
+                <span className="text-accent">
+                  Te llega: ${(Number(form.monto) - calcularComisionTarjeta(Number(form.monto))).toFixed(2)}
+                </span>
+              </p>
+            )}
+          </div>
         )}
 
         <div>

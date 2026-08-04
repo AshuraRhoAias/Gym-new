@@ -6,6 +6,8 @@ interface QrShareCardProps {
   nombre: string
   dataUrl: string
   telefono: string | null
+  monto?: number | null
+  comisionTarjeta?: number | null
   onContinue: () => void
 }
 
@@ -21,7 +23,14 @@ function waLink(telefono: string | null): string | null {
 
 type EnvioEstado = 'idle' | 'validando' | 'enviando' | 'enviado' | 'error'
 
-export default function QrShareCard({ nombre, dataUrl, telefono, onContinue }: QrShareCardProps) {
+export default function QrShareCard({
+  nombre,
+  dataUrl,
+  telefono,
+  monto,
+  comisionTarjeta,
+  onContinue,
+}: QrShareCardProps) {
   const link = waLink(telefono)
   const [estado, setEstado] = useState<EnvioEstado>('idle')
   const [error, setError] = useState<string | null>(null)
@@ -58,6 +67,16 @@ export default function QrShareCard({ nombre, dataUrl, telefono, onContinue }: Q
         <h3 className="text-white font-semibold">Registro guardado</h3>
         <p className="text-sm text-gray-400">Código QR de acceso para {nombre}</p>
       </div>
+
+      {comisionTarjeta != null && monto != null && (
+        <div className="w-full bg-surface-2 border border-warning/30 rounded-lg px-3 py-2 text-xs">
+          <p className="text-gray-400">
+            Monto: <span className="text-white">${monto.toFixed(2)}</span>
+          </p>
+          <p className="text-warning">Comisión tarjeta: -${comisionTarjeta.toFixed(2)}</p>
+          <p className="text-accent font-medium">Te llega: ${(monto - comisionTarjeta).toFixed(2)}</p>
+        </div>
+      )}
 
       <img src={dataUrl} alt="Código QR" className="w-48 h-48 rounded-lg border border-border bg-white p-2" />
 

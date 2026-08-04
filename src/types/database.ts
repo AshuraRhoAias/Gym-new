@@ -43,6 +43,8 @@ export interface Registro {
   /** Null cuando el rol actual (editor/viewer) no tiene permiso de ver montos (ver registros_view). */
   monto: number | null
   autogenerado: number | null
+  /** Comisión automática (4.06%) cuando forma_pago = 'tarjeta'; null en otros métodos o sin permiso de ver montos. */
+  comision_tarjeta: number | null
   estatus: RecordStatus
   horario: string | null
   fecha_ingreso: string | null
@@ -262,6 +264,13 @@ export const PAGO_LABEL: Record<PaymentMethod, string> = {
   transferencia: 'Transferencia',
   otro: 'Otro',
   sin_metodo: 'Sin método',
+}
+
+/** % que se descuenta automáticamente en pagos con tarjeta (inscripciones/renovaciones). */
+export const COMISION_TARJETA_PCT = 4.06
+
+export function calcularComisionTarjeta(monto: number) {
+  return Math.round(monto * (COMISION_TARJETA_PCT / 100) * 100) / 100
 }
 
 export const MESES = [
