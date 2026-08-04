@@ -23,6 +23,7 @@ const Faltan = lazy(() => import('./pages/Faltan'))
 const Usuarios = lazy(() => import('./pages/Usuarios'))
 const Auditoria = lazy(() => import('./pages/Auditoria'))
 const Nomina = lazy(() => import('./pages/Nomina'))
+const Finanzas = lazy(() => import('./pages/Finanzas'))
 const ComingSoon = lazy(() => import('./pages/ComingSoon'))
 
 function PageFallback() {
@@ -69,6 +70,7 @@ export default function App() {
                 <Route path="/usuarios" element={guarded(<Usuarios />)} />
                 <Route path="/auditoria" element={guarded(<Auditoria />)} />
                 <Route path="/nomina" element={guarded(<Nomina />)} />
+                <Route path="/finanzas" element={guarded(<Finanzas />)} />
                 <Route
                   path="*"
                   element={

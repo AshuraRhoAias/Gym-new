@@ -19,6 +19,7 @@ const LINKS = [
   { to: '/completos', label: 'Completos' },
   { to: '/faltan', label: 'Faltan' },
   { to: '/nomina', label: 'Nómina' },
+  { to: '/finanzas', label: 'Finanzas' },
   { to: '/usuarios', label: 'Usuarios' },
   { to: '/auditoria', label: 'Auditoría' },
 ]
