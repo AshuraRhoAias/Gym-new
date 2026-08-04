@@ -16,8 +16,11 @@ export default function Completos() {
   const [search, setSearch] = useState('')
 
   const completos = useMemo(
-    () => data.filter((r) => r.estatus === 'completo' || r.estatus === 'entregado'),
-    [data],
+    () =>
+      data.filter(
+        (r) => (r.estatus === 'completo' || r.estatus === 'entregado') && (!hideSinFolio || tieneFolio(r.folio)),
+      ),
+    [data, hideSinFolio],
   )
 
   const filtered = useMemo(() => {

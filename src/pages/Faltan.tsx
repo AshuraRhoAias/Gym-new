@@ -64,11 +64,16 @@ export default function Faltan() {
     }
   }, [mes, anio])
 
+  const registrosVisibles = useMemo(
+    () => (hideSinFolio ? registros.filter((r) => tieneFolio(r.folio)) : registros),
+    [registros, hideSinFolio],
+  )
+
   const totalTipos = useMemo(() => {
     const set = new Set<string>()
-    registros.forEach((r) => r.faltantes.forEach((f) => set.add(f)))
+    registrosVisibles.forEach((r) => r.faltantes.forEach((f) => set.add(f)))
     return set.size
-  }, [registros])
+  }, [registrosVisibles])
 
   return (
     <div className="flex flex-col gap-6">
@@ -85,7 +90,7 @@ export default function Faltan() {
 
       <div className="bg-surface border border-border rounded-xl px-5 py-4 flex flex-wrap items-center gap-8">
         <div>
-          <div className="text-3xl font-bold text-white">{registros.length}</div>
+          <div className="text-3xl font-bold text-white">{registrosVisibles.length}</div>
           <div className="text-xs text-gray-500">Total con documentos faltantes</div>
         </div>
         <div>
@@ -95,12 +100,12 @@ export default function Faltan() {
       </div>
 
       {loading && <p className="text-sm text-gray-500">Cargando…</p>}
-      {!loading && registros.length === 0 && (
+      {!loading && registrosVisibles.length === 0 && (
         <p className="text-sm text-gray-500 text-center py-8">Sin documentos faltantes para este periodo. 🎉</p>
       )}
 
       <div className="flex flex-col gap-3">
-        {registros.map((r) => (
+        {registrosVisibles.map((r) => (
           <div key={r.id} className="bg-surface border border-border rounded-xl p-4">
             <div className="flex flex-wrap items-start justify-between gap-2 mb-2">
               <div>
