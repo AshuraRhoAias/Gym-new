@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { Receipt, Trash2 } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
+import ComprobanteCfdiField from '../ComprobanteCfdiField'
 import { CATEGORIA_GASTO_LABEL, type CategoriaGasto, type GastoOperativo } from '../../types/database'
 
 export default function GastosTab({
@@ -19,7 +20,6 @@ export default function GastosTab({
   const [categoria, setCategoria] = useState<CategoriaGasto>('papeleria')
   const [descripcion, setDescripcion] = useState('')
   const [monto, setMonto] = useState('')
-  const [tieneCfdi, setTieneCfdi] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -43,7 +43,7 @@ export default function GastosTab({
       categoria,
       descripcion: descripcion.trim() || null,
       monto: montoNum,
-      tiene_cfdi: tieneCfdi,
+      tiene_cfdi: false,
       created_by: username,
     })
     setSaving(false)
@@ -53,13 +53,17 @@ export default function GastosTab({
     }
     setDescripcion('')
     setMonto('')
-    setTieneCfdi(false)
     onChanged()
   }
 
   const handleBorrar = async (id: string) => {
     if (!confirm('¿Borrar este gasto?')) return
     await supabase.from('gastos_operativos').delete().eq('id', id)
+    onChanged()
+  }
+
+  const updateGasto = async (id: string, patch: Partial<GastoOperativo>) => {
+    await supabase.from('gastos_operativos').update(patch).eq('id', id)
     onChanged()
   }
 
@@ -97,10 +101,9 @@ export default function GastosTab({
             className="bg-surface-2 border border-border rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:border-accent"
           />
         </div>
-        <label className="flex items-center gap-2 text-sm text-gray-300">
-          <input type="checkbox" checked={tieneCfdi} onChange={(e) => setTieneCfdi(e.target.checked)} />
-          ¿Tiene CFDI / comprobante fiscal?
-        </label>
+        <p className="text-xs text-gray-500">
+          El CFDI/comprobante (folio y foto) se adjunta después, directamente en la fila de la tabla.
+        </p>
         <button
           type="submit"
           disabled={saving}
@@ -131,27 +134,43 @@ export default function GastosTab({
           )}
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-sm min-w-[600px]">
+          <table className="w-full text-sm min-w-[750px]">
             <thead>
               <tr className="text-left text-gray-500 border-b border-border">
                 <th className="px-4 py-2 font-normal">Categoría</th>
                 <th className="px-4 py-2 font-normal">Descripción</th>
                 <th className="px-4 py-2 font-normal">Monto</th>
-                <th className="px-4 py-2 font-normal">CFDI</th>
+                <th className="px-4 py-2 font-normal">CFDI / comprobante (para el SAT)</th>
                 <th className="px-4 py-2 font-normal text-right">Acciones</th>
               </tr>
             </thead>
             <tbody>
               {gastos.map((g) => (
                 <tr key={g.id} className="border-b border-border/50">
-                  <td className="px-4 py-2 text-white">{CATEGORIA_GASTO_LABEL[g.categoria]}</td>
+                  <td className="px-4 py-2 text-white whitespace-nowrap">{CATEGORIA_GASTO_LABEL[g.categoria]}</td>
                   <td className="px-4 py-2 text-gray-300">{g.descripcion || '—'}</td>
-                  <td className="px-4 py-2 text-gray-200">${g.monto.toFixed(2)}</td>
+                  <td className="px-4 py-2 text-gray-200 whitespace-nowrap">${g.monto.toFixed(2)}</td>
                   <td className="px-4 py-2">
-                    {g.tiene_cfdi ? (
-                      <span className="text-xs px-2 py-0.5 rounded-md bg-accent/15 text-accent">Sí</span>
-                    ) : (
-                      <span className="text-xs px-2 py-0.5 rounded-md bg-warning/15 text-amber-300">No</span>
+                    <label className="flex items-center gap-1.5 text-xs text-gray-300 mb-1.5">
+                      <input
+                        type="checkbox"
+                        checked={g.tiene_cfdi}
+                        onChange={(e) => updateGasto(g.id, { tiene_cfdi: e.target.checked })}
+                      />
+                      Tiene CFDI
+                    </label>
+                    {g.tiene_cfdi && (
+                      <ComprobanteCfdiField
+                        folio={g.folio_comprobante ?? ''}
+                        onFolioChange={(v) => updateGasto(g.id, { folio_comprobante: v || null })}
+                        comprobante={{
+                          comprobante_path: g.comprobante_path,
+                          comprobante_iv: g.comprobante_iv,
+                          comprobante_salt: g.comprobante_salt,
+                          comprobante_mime: g.comprobante_mime,
+                        }}
+                        onComprobanteChange={(v) => updateGasto(g.id, v)}
+                      />
                     )}
                   </td>
                   <td className="px-4 py-2 text-right">
