@@ -64,23 +64,24 @@ const TABS: { key: RecordKind; label: string }[] = [
   { key: 'renovacion_bacho', label: 'Renovación Bacho' },
 ]
 
-function useCount(kind: RecordKind, mes: string, anio: number) {
+function useCount(kind: RecordKind, mes: string, anio: number, hideSinFolio: boolean) {
   const [count, setCount] = useState(0)
   useEffect(() => {
     let active = true
-    supabase
+    let query = supabase
       .from('registros')
       .select('id', { count: 'exact', head: true })
       .eq('kind', kind)
       .eq('mes', mes)
       .eq('anio', anio)
-      .then(({ count: c }) => {
-        if (active) setCount(c ?? 0)
-      })
+    if (hideSinFolio) query = query.not('folio', 'is', null).neq('folio', '0')
+    query.then(({ count: c }) => {
+      if (active) setCount(c ?? 0)
+    })
     return () => {
       active = false
     }
-  }, [kind, mes, anio])
+  }, [kind, mes, anio, hideSinFolio])
   return count
 }
 
@@ -105,10 +106,10 @@ export default function Dashboard() {
     refresh()
   }
 
-  const countInscripcion = useCount('inscripcion', mes, anio)
-  const countRenovacion = useCount('renovacion', mes, anio)
-  const countInscripcionBacho = useCount('inscripcion_bacho', mes, anio)
-  const countRenovacionBacho = useCount('renovacion_bacho', mes, anio)
+  const countInscripcion = useCount('inscripcion', mes, anio, hideSinFolio)
+  const countRenovacion = useCount('renovacion', mes, anio, hideSinFolio)
+  const countInscripcionBacho = useCount('inscripcion_bacho', mes, anio, hideSinFolio)
+  const countRenovacionBacho = useCount('renovacion_bacho', mes, anio, hideSinFolio)
 
   const filtered = useMemo(() => {
     const visibles = hideSinFolio ? data.filter((r) => tieneFolio(r.folio)) : data

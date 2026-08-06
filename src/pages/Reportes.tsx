@@ -7,6 +7,7 @@ import PeriodSelector from '../components/PeriodSelector'
 import MiniStat from '../components/MiniStat'
 import StatusBadge from '../components/StatusBadge'
 import Masked from '../components/Masked'
+import { PAGO_LABEL } from '../types/database'
 
 export default function Reportes() {
   const { mes, anio } = usePeriod()
@@ -91,13 +92,16 @@ function ReportSection({
         <p className="text-sm text-gray-500 text-center py-6">No hay datos para mostrar</p>
       ) : (
         <div className="overflow-x-auto">
-          <table className="w-full text-sm min-w-[600px]">
+          <table className="w-full text-sm min-w-[900px]">
             <thead>
               <tr className="text-left text-gray-500 border-b border-border">
                 <th className="px-4 py-2 font-normal">Nombre</th>
                 <th className="px-4 py-2 font-normal">Folio</th>
                 <th className="px-4 py-2 font-normal">Estatus</th>
                 <th className="px-4 py-2 font-normal">Fecha</th>
+                <th className="px-4 py-2 font-normal">Atendido por</th>
+                <th className="px-4 py-2 font-normal">Método</th>
+                <th className="px-4 py-2 font-normal">Monto</th>
               </tr>
             </thead>
             <tbody>
@@ -112,6 +116,11 @@ function ReportSection({
                   </td>
                   <td className="px-4 py-2 text-gray-400 whitespace-nowrap">
                     {r.fecha_ingreso ? new Date(r.fecha_ingreso).toLocaleDateString() : '—'}
+                  </td>
+                  <td className="px-4 py-2 text-gray-400">{r.atendido_por || '—'}</td>
+                  <td className="px-4 py-2 text-gray-300">{PAGO_LABEL[r.forma_pago]}</td>
+                  <td className="px-4 py-2 text-gray-200">
+                    {r.monto === null ? <span className="text-gray-600">Oculto</span> : `$${r.monto.toFixed(2)}`}
                   </td>
                 </tr>
               ))}
