@@ -38,6 +38,7 @@ interface RegistroFormProps {
 
 interface FormState {
   nombre: string
+  kind: RecordKind
   folio: string
   folioAnterior: string
   mes: string
@@ -57,8 +58,9 @@ interface FormState {
   comentarios: string
 }
 
-const emptyState = (mes: string, anio: number): FormState => ({
+const emptyState = (mes: string, anio: number, kind: RecordKind): FormState => ({
   nombre: '',
+  kind,
   folio: '',
   folioAnterior: '',
   mes,
@@ -95,6 +97,7 @@ export default function RegistroForm({
     if (initial) {
       return {
         nombre: initial.nombre,
+        kind: initial.kind,
         folio: initial.folio ?? '',
         folioAnterior: initial.folio_anterior ?? '',
         mes: initial.mes,
@@ -116,7 +119,7 @@ export default function RegistroForm({
       }
     }
     return {
-      ...emptyState(mes, anio),
+      ...emptyState(mes, anio, kind),
       nombre: prefill?.nombre ?? '',
       telefono: prefill?.telefono ?? '',
       folio: prefill?.folio ?? '',
@@ -204,7 +207,7 @@ export default function RegistroForm({
     }
 
     const payload: Record<string, unknown> = {
-      kind,
+      kind: form.kind,
       nombre: form.nombre.trim(),
       folio: form.folio.trim() || '0',
       folio_anterior: form.folioAnterior.trim() || null,
@@ -350,7 +353,23 @@ export default function RegistroForm({
         <TextField label="Nombre *" value={form.nombre} onChange={(v) => update('nombre', v)} required />
         <TextField label="Folio" value={form.folio} onChange={(v) => update('folio', v)} />
 
-        {(kind === 'renovacion' || kind === 'renovacion_bacho') && (
+        {initial && (
+          <div>
+            <label className="block text-xs text-gray-400 mb-1.5">Tipo de registro</label>
+            <select
+              value={form.kind}
+              onChange={(e) => update('kind', e.target.value as RecordKind)}
+              className="w-full bg-surface-2 border border-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-accent"
+            >
+              <option value="inscripcion">Inscripción</option>
+              <option value="renovacion">Renovación</option>
+              <option value="inscripcion_bacho">Inscripción Bacho</option>
+              <option value="renovacion_bacho">Renovación Bacho</option>
+            </select>
+          </div>
+        )}
+
+        {(form.kind === 'renovacion' || form.kind === 'renovacion_bacho') && (
           <TextField
             label="Folio anterior"
             value={form.folioAnterior}
