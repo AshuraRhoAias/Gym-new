@@ -55,6 +55,12 @@ export interface Registro {
   pago1_monto: number | null
   pago2_forma_pago: PaymentMethod | null
   pago2_monto: number | null
+  /** true cuando al socio se le autorizó una beca que descuenta del monto a cobrar. */
+  beca: boolean
+  /** Quién autorizó la beca; null si no aplica o sin permiso de ver montos. */
+  beca_autorizado_por: string | null
+  /** Monto ($) autorizado de la beca, ya descontado del `monto` guardado; null si no aplica o sin permiso de ver montos. */
+  beca_monto: number | null
   estatus: RecordStatus
   horario: string | null
   fecha_ingreso: string | null
