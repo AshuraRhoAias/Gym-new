@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { CalendarDays, Search } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { usePrivacy, tieneFolio } from '../context/PrivacyContext'
 import { PAGO_LABEL, type Registro } from '../types/database'
 import Masked from '../components/Masked'
 
@@ -9,9 +10,15 @@ function todayInput() {
 }
 
 export default function ReporteDia() {
+  const { hideSinFolio } = usePrivacy()
   const [fecha, setFecha] = useState(todayInput())
-  const [registros, setRegistros] = useState<Registro[]>([])
+  const [registrosCompletos, setRegistrosCompletos] = useState<Registro[]>([])
   const [loading, setLoading] = useState(false)
+
+  const registros = useMemo(
+    () => (hideSinFolio ? registrosCompletos.filter((r) => tieneFolio(r.folio)) : registrosCompletos),
+    [registrosCompletos, hideSinFolio],
+  )
 
   const consultar = async (dia: string) => {
     setLoading(true)
@@ -23,7 +30,7 @@ export default function ReporteDia() {
       .gte('fecha_ingreso', start)
       .lte('fecha_ingreso', end)
       .order('fecha_ingreso', { ascending: true })
-    setRegistros(data ?? [])
+    setRegistrosCompletos(data ?? [])
     setLoading(false)
   }
 

@@ -111,12 +111,13 @@ export default function Dashboard() {
   const countRenovacionBacho = useCount('renovacion_bacho', mes, anio)
 
   const filtered = useMemo(() => {
-    if (!search.trim()) return data
+    const visibles = hideSinFolio ? data.filter((r) => tieneFolio(r.folio)) : data
+    if (!search.trim()) return visibles
     const q = search.toLowerCase()
-    return data.filter(
+    return visibles.filter(
       (r) => r.nombre.toLowerCase().includes(q) || (r.folio ?? '').toLowerCase().includes(q),
     )
-  }, [data, search])
+  }, [data, search, hideSinFolio])
 
   return (
     <div className="flex flex-col gap-6">
