@@ -299,6 +299,15 @@ export default function Dashboard() {
             {detail.saldo_pendiente != null && detail.saldo_pendiente > 0 && (
               <Field label="Saldo pendiente" value={<span className="text-danger">${detail.saldo_pendiente.toFixed(2)}</span>} />
             )}
+            {detail.beca && (
+              <>
+                <Field label="Beca" value={<span className="text-accent">Sí</span>} />
+                <Field label="Beca autorizada por" value={detail.beca_autorizado_por || '—'} />
+                {detail.beca_monto != null && (
+                  <Field label="Monto de la beca" value={`-$${detail.beca_monto.toFixed(2)}`} />
+                )}
+              </>
+            )}
             <Field label="Atendido por" value={detail.atendido_por || '—'} />
             <Field label="Horario" value={detail.horario || '—'} />
             <DecryptedField

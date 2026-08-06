@@ -55,6 +55,9 @@ interface FormState {
   fecha_ingreso: string
   telefono: string
   bachillerato: boolean
+  beca: boolean
+  becaAutorizadoPor: string
+  becaMonto: string
   comentarios: string
 }
 
@@ -77,6 +80,9 @@ const emptyState = (mes: string, anio: number, kind: RecordKind): FormState => (
   fecha_ingreso: '',
   telefono: '',
   bachillerato: false,
+  beca: false,
+  becaAutorizadoPor: '',
+  becaMonto: '',
   comentarios: '',
 })
 
@@ -103,7 +109,12 @@ export default function RegistroForm({
         mes: initial.mes,
         anio: initial.anio,
         forma_pago: initial.forma_pago,
-        monto: String(initial.monto ?? ''),
+        // El monto guardado ya tiene la beca descontada; se reconstruye el
+        // monto "de lista" sumando la beca de vuelta para poder editarlo.
+        monto:
+          initial.beca && initial.monto != null
+            ? String(initial.monto + (initial.beca_monto ?? 0))
+            : String(initial.monto ?? ''),
         pago1FormaPago: initial.pago1_forma_pago ?? 'efectivo',
         pago1Monto: initial.pago1_monto != null ? String(initial.pago1_monto) : '',
         pago2FormaPago: initial.pago2_forma_pago ?? 'efectivo',
@@ -115,6 +126,9 @@ export default function RegistroForm({
         // Se descifran de forma asíncrona en el useEffect de abajo.
         telefono: '',
         bachillerato: initial.bachillerato,
+        beca: initial.beca,
+        becaAutorizadoPor: initial.beca_autorizado_por ?? '',
+        becaMonto: initial.beca_monto != null ? String(initial.beca_monto) : '',
         comentarios: '',
       }
     }
@@ -184,6 +198,22 @@ export default function RegistroForm({
   const update = <K extends keyof FormState>(key: K, value: FormState[K]) =>
     setForm((f) => ({ ...f, [key]: value }))
 
+  const handleKindChange = (newKind: RecordKind) =>
+    setForm((f) => ({ ...f, kind: newKind, bachillerato: newKind === 'inscripcion_bacho' || newKind === 'renovacion_bacho' }))
+
+  const handleBachilleratoChange = (checked: boolean) =>
+    setForm((f) => {
+      const esRenovacion = f.kind === 'renovacion' || f.kind === 'renovacion_bacho'
+      const newKind: RecordKind = checked
+        ? esRenovacion
+          ? 'renovacion_bacho'
+          : 'inscripcion_bacho'
+        : esRenovacion
+          ? 'renovacion'
+          : 'inscripcion'
+      return { ...f, bachillerato: checked, kind: newKind }
+    })
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
     if (!form.nombre.trim()) {
@@ -241,14 +271,22 @@ export default function RegistroForm({
         payload.comision_tarjeta =
           (form.pago1FormaPago === 'tarjeta' && pago1Monto > 0 ? calcularComisionTarjeta(pago1Monto) : 0) +
           (form.pago2FormaPago === 'tarjeta' && pago2Monto > 0 ? calcularComisionTarjeta(pago2Monto) : 0) || null
+        payload.beca = false
+        payload.beca_autorizado_por = null
+        payload.beca_monto = null
       } else {
-        const monto = Number(form.monto) || 0
+        const montoLista = Number(form.monto) || 0
+        const becaMonto = form.beca ? Number(form.becaMonto) || 0 : 0
+        const monto = Math.max(0, montoLista - becaMonto)
         payload.monto = monto
         payload.comision_tarjeta = form.forma_pago === 'tarjeta' && monto > 0 ? calcularComisionTarjeta(monto) : null
         payload.pago1_forma_pago = null
         payload.pago1_monto = null
         payload.pago2_forma_pago = null
         payload.pago2_monto = null
+        payload.beca = form.beca
+        payload.beca_autorizado_por = form.beca ? form.becaAutorizadoPor.trim() || null : null
+        payload.beca_monto = form.beca ? becaMonto : null
       }
       payload.saldo_pendiente = form.saldoPendiente.trim() ? Number(form.saldoPendiente) : null
     } else if (!initial) {
@@ -259,6 +297,9 @@ export default function RegistroForm({
       payload.pago1_monto = null
       payload.pago2_forma_pago = null
       payload.pago2_monto = null
+      payload.beca = false
+      payload.beca_autorizado_por = null
+      payload.beca_monto = null
     }
 
     const registroId = registroIdRef.current
@@ -358,7 +399,7 @@ export default function RegistroForm({
             <label className="block text-xs text-gray-400 mb-1.5">Tipo de registro</label>
             <select
               value={form.kind}
-              onChange={(e) => update('kind', e.target.value as RecordKind)}
+              onChange={(e) => handleKindChange(e.target.value as RecordKind)}
               className="w-full bg-surface-2 border border-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-accent"
             >
               <option value="inscripcion">Inscripción</option>
@@ -423,6 +464,41 @@ export default function RegistroForm({
                 <span className="text-accent">
                   Te llega: ${(Number(form.monto) - calcularComisionTarjeta(Number(form.monto))).toFixed(2)}
                 </span>
+              </p>
+            )}
+          </div>
+        )}
+        {moneyVisible && form.forma_pago !== 'dos_pagos' && (
+          <div className="sm:col-span-2 bg-surface-2/50 border border-border rounded-lg p-3">
+            <label className="flex items-center gap-2 text-sm text-gray-300">
+              <input
+                type="checkbox"
+                checked={form.beca}
+                onChange={(e) => update('beca', e.target.checked)}
+                className="accent-accent"
+              />
+              ¿Aplica beca?
+            </label>
+            {form.beca && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
+                <TextField
+                  label="Beca autorizada por"
+                  value={form.becaAutorizadoPor}
+                  onChange={(v) => update('becaAutorizadoPor', v)}
+                  placeholder="Nombre de quien autorizó la beca"
+                />
+                <TextField
+                  label="Monto de la beca ($)"
+                  type="number"
+                  value={form.becaMonto}
+                  onChange={(v) => update('becaMonto', v)}
+                  placeholder="0.00"
+                />
+              </div>
+            )}
+            {form.beca && Number(form.becaMonto) > 0 && (
+              <p className="text-xs text-accent mt-2">
+                Monto a cobrar con beca: ${Math.max(0, (Number(form.monto) || 0) - Number(form.becaMonto)).toFixed(2)}
               </p>
             )}
           </div>
@@ -506,10 +582,10 @@ export default function RegistroForm({
         <input
           type="checkbox"
           checked={form.bachillerato}
-          onChange={(e) => update('bachillerato', e.target.checked)}
+          onChange={(e) => handleBachilleratoChange(e.target.checked)}
           className="accent-accent"
         />
-        ¿Es bachillerato?
+        ¿Es bachillerato? (mueve el registro a {form.kind === 'renovacion' || form.kind === 'renovacion_bacho' ? 'Renovación' : 'Inscripción'} Bacho)
       </label>
 
       <div>
