@@ -44,6 +44,14 @@ export default function Renovaciones() {
     setResolving(false)
   }
 
+  const resetToSearch = () => {
+    setSelected(null)
+    setSkipped(false)
+    setSelectedTelefono(undefined)
+    setQuery('')
+    setResults([])
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <div>
@@ -118,6 +126,8 @@ export default function Renovaciones() {
               setSkipped(false)
             }}
             onSaved={() => navigate('/')}
+            onRegisterAnother={resetToSearch}
+            registerAnotherLabel="Registrar otra renovación"
           />
         </div>
       )}

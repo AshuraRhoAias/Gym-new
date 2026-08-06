@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Download, MessageCircle, CheckCircle2, Loader2, Send } from 'lucide-react'
+import { Download, MessageCircle, CheckCircle2, Loader2, Send, Plus } from 'lucide-react'
 import { checkWhatsAppNumber, sendQrByWhatsApp, WHATSAPP_ERROR_LABEL } from '../lib/whatsappService'
 
 interface QrShareCardProps {
@@ -9,6 +9,9 @@ interface QrShareCardProps {
   monto?: number | null
   comisionTarjeta?: number | null
   onContinue: () => void
+  /** Cuando se pasa, se muestra un botón adicional para volver al formulario en blanco sin salir de la página. */
+  onRegisterAnother?: () => void
+  registerAnotherLabel?: string
 }
 
 function waLink(telefono: string | null): string | null {
@@ -30,6 +33,8 @@ export default function QrShareCard({
   monto,
   comisionTarjeta,
   onContinue,
+  onRegisterAnother,
+  registerAnotherLabel,
 }: QrShareCardProps) {
   const link = waLink(telefono)
   const [estado, setEstado] = useState<EnvioEstado>('idle')
@@ -137,9 +142,19 @@ export default function QrShareCard({
         </p>
       )}
 
-      <button onClick={onContinue} className="text-sm text-gray-400 hover:text-white mt-2">
-        Continuar →
-      </button>
+      <div className="flex flex-wrap justify-center gap-3 mt-2">
+        {onRegisterAnother && (
+          <button
+            onClick={onRegisterAnother}
+            className="flex items-center gap-1.5 bg-accent hover:bg-accent-dark text-black rounded-lg px-3 py-2 text-sm font-medium"
+          >
+            <Plus size={14} /> {registerAnotherLabel ?? 'Registrar otra'}
+          </button>
+        )}
+        <button onClick={onContinue} className="text-sm text-gray-400 hover:text-white">
+          Continuar →
+        </button>
+      </div>
     </div>
   )
 }

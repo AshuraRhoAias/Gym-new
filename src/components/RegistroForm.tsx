@@ -31,6 +31,9 @@ interface RegistroFormProps {
   onSaved: () => void
   /** Cuando es true se renderiza como tarjeta embebida en la página en vez de modal. */
   inline?: boolean
+  /** Si se pasa, el panel de QR muestra un botón para volver a un formulario en blanco sin salir de la página. */
+  onRegisterAnother?: () => void
+  registerAnotherLabel?: string
 }
 
 interface FormState {
@@ -75,7 +78,16 @@ const emptyState = (mes: string, anio: number): FormState => ({
   comentarios: '',
 })
 
-export default function RegistroForm({ kind, initial, prefill, onClose, onSaved, inline }: RegistroFormProps) {
+export default function RegistroForm({
+  kind,
+  initial,
+  prefill,
+  onClose,
+  onSaved,
+  inline,
+  onRegisterAnother,
+  registerAnotherLabel,
+}: RegistroFormProps) {
   const { username, role } = useAuth()
   const moneyVisible = canSeeMoney(role)
   const { mes, anio } = usePeriod()
@@ -314,6 +326,15 @@ export default function RegistroForm({ kind, initial, prefill, onClose, onSaved,
           setQrPanel(null)
           onSaved()
         }}
+        onRegisterAnother={
+          onRegisterAnother
+            ? () => {
+                setQrPanel(null)
+                onRegisterAnother()
+              }
+            : undefined
+        }
+        registerAnotherLabel={registerAnotherLabel}
       />
     )
     return inline ? panel : (
@@ -376,6 +397,7 @@ export default function RegistroForm({ kind, initial, prefill, onClose, onSaved,
         {moneyVisible && form.forma_pago !== 'dos_pagos' && (
           <div>
             <TextField label="Monto" type="number" value={form.monto} onChange={(v) => update('monto', v)} placeholder="Ingrese el monto" />
+            <MontoPresets value={form.monto} onSelect={(v) => update('monto', v)} />
             {form.forma_pago === 'tarjeta' && Number(form.monto) > 0 && (
               <p className="text-xs text-warning mt-1.5">
                 Comisión tarjeta ({COMISION_TARJETA_PCT}%): -${calcularComisionTarjeta(Number(form.monto)).toFixed(2)} ·{' '}
@@ -407,6 +429,7 @@ export default function RegistroForm({ kind, initial, prefill, onClose, onSaved,
                     <option value="otro">Otro</option>
                   </select>
                   <TextField label="" value={montoValue} type="number" onChange={(v) => update(montoKey, v)} placeholder="Monto" />
+                  <MontoPresets value={montoValue} onSelect={(v) => update(montoKey, v)} />
                   {formaValue === 'tarjeta' && Number(montoValue) > 0 && (
                     <p className="text-xs text-warning">
                       Comisión ({COMISION_TARJETA_PCT}%): -${calcularComisionTarjeta(Number(montoValue)).toFixed(2)}
@@ -558,6 +581,30 @@ export default function RegistroForm({ kind, initial, prefill, onClose, onSaved,
     >
       {content}
     </Modal>
+  )
+}
+
+/** Montos frecuentes para captura rápida; solo se muestran junto a un campo de Monto ya protegido por moneyVisible. */
+const MONTO_PRESETS = [555, 389, 309, 300]
+
+function MontoPresets({ value, onSelect }: { value: string; onSelect: (v: string) => void }) {
+  return (
+    <div className="flex flex-wrap gap-1.5 mt-1.5">
+      {MONTO_PRESETS.map((preset) => (
+        <button
+          key={preset}
+          type="button"
+          onClick={() => onSelect(String(preset))}
+          className={`px-2.5 py-1 text-xs rounded-md border transition-colors ${
+            value === String(preset)
+              ? 'bg-accent text-black border-accent font-medium'
+              : 'bg-surface-2 border-border text-gray-300 hover:border-accent/50'
+          }`}
+        >
+          ${preset}
+        </button>
+      ))}
+    </div>
   )
 }
 

@@ -20,6 +20,7 @@ const LINKS = [
   { to: '/faltan', label: 'Faltan' },
   { to: '/nomina', label: 'Nómina' },
   { to: '/finanzas', label: 'Finanzas' },
+  { to: '/whats', label: 'Whats' },
   { to: '/usuarios', label: 'Usuarios' },
   { to: '/auditoria', label: 'Auditoría' },
 ]
