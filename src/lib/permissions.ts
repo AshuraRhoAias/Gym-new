@@ -26,7 +26,7 @@ export const canWriteRegistros = (role: Role | null) => role === 'superadmin' ||
  */
 const EDITOR_ROUTES = ['/', '/inscripciones', '/renovaciones', '/scanner', '/reportes', '/completos', '/faltan']
 const VIEWER_ROUTES = ['/', '/enum']
-const MONEY_ROUTES = ['/registros-visitas', '/caja-visitas', '/payment-monitor', '/dia', '/enum', '/nomina']
+const MONEY_ROUTES = ['/registros-visitas', '/caja-visitas', '/payment-monitor', '/dia', '/enum', '/nomina', '/whats']
 const ADMIN_ONLY_ROUTES = ['/usuarios', '/auditoria']
 
 export function isRouteAllowed(role: Role | null, path: string): boolean {
