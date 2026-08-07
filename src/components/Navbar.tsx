@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { NavLink } from 'react-router-dom'
+import { Link, useLocation } from 'wouter'
 import { Dumbbell, EyeOff, User, LogOut, Menu, X } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { usePrivacy } from '../context/PrivacyContext'
@@ -28,6 +28,7 @@ const LINKS = [
 export default function Navbar() {
   const { username, role, signOut } = useAuth()
   const { hideSinFolio } = usePrivacy()
+  const [pathname] = useLocation()
   const [open, setOpen] = useState(false)
   const [userMenu, setUserMenu] = useState(false)
 
@@ -43,20 +44,17 @@ export default function Navbar() {
 
         <nav className="hidden lg:flex items-center gap-1 overflow-x-auto no-scrollbar">
           {links.map((link) => (
-            <NavLink
+            <Link
               key={link.to}
-              to={link.to}
-              end={link.to === '/'}
-              className={({ isActive }) =>
-                `px-2.5 py-1.5 rounded-md text-sm whitespace-nowrap transition-colors ${
-                  isActive
-                    ? 'text-accent bg-accent/10'
-                    : 'text-gray-300 hover:text-white hover:bg-surface'
-                }`
-              }
+              href={link.to}
+              className={`px-2.5 py-1.5 rounded-md text-sm whitespace-nowrap transition-colors ${
+                pathname === link.to
+                  ? 'text-accent bg-accent/10'
+                  : 'text-gray-300 hover:text-white hover:bg-surface'
+              }`}
             >
               {link.label}
-            </NavLink>
+            </Link>
           ))}
         </nav>
 
@@ -108,19 +106,16 @@ export default function Navbar() {
       {open && (
         <nav className="lg:hidden flex flex-col border-t border-border px-2 py-2">
           {links.map((link) => (
-            <NavLink
+            <Link
               key={link.to}
-              to={link.to}
-              end={link.to === '/'}
+              href={link.to}
               onClick={() => setOpen(false)}
-              className={({ isActive }) =>
-                `px-3 py-2.5 rounded-md text-sm ${
-                  isActive ? 'text-accent bg-accent/10' : 'text-gray-300'
-                }`
-              }
+              className={`px-3 py-2.5 rounded-md text-sm ${
+                pathname === link.to ? 'text-accent bg-accent/10' : 'text-gray-300'
+              }`}
             >
               {link.label}
-            </NavLink>
+            </Link>
           ))}
         </nav>
       )}

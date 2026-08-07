@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { Navigate } from 'react-router-dom'
+import { Redirect } from 'wouter'
 import { useAuth } from '../context/AuthContext'
 
 export default function ProtectedRoute({ children }: { children: ReactNode }) {
@@ -13,7 +13,7 @@ export default function ProtectedRoute({ children }: { children: ReactNode }) {
     )
   }
 
-  if (!session) return <Navigate to="/login" replace />
+  if (!session) return <Redirect to="/login" replace />
 
   return <>{children}</>
 }

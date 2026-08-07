@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation } from 'wouter'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import type { MovementKind, PaymentMethod } from '../types/database'
@@ -12,7 +12,7 @@ const TIPOS: { key: MovementKind; title: string; hint: string }[] = [
 
 export default function RegistroVisita() {
   const { username } = useAuth()
-  const navigate = useNavigate()
+  const [, navigate] = useLocation()
   const [tipo, setTipo] = useState<MovementKind>('visita')
   const [monto, setMonto] = useState('')
   const [metodo, setMetodo] = useState<PaymentMethod>('efectivo')

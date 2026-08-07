@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { Navigate } from 'react-router-dom'
+import { Redirect } from 'wouter'
 import { Dumbbell, Lock, User } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 
@@ -11,7 +11,7 @@ export default function Login() {
   const [submitting, setSubmitting] = useState(false)
 
   if (!loading && session) {
-    return <Navigate to="/" replace />
+    return <Redirect to="/" replace />
   }
 
   const handleSubmit = async (e: FormEvent) => {
