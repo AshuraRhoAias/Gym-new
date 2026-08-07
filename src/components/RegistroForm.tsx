@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import { usePeriod } from '../context/PeriodContext'
 import { decryptText, encryptText } from '../lib/crypto'
-import { buildQrToken, qrToDataUrl } from '../lib/qr'
+import { buildQrToken, buildQrFlyerDataUrl } from '../lib/qr'
 import { canSeeMoney } from '../lib/permissions'
 import Modal from './Modal'
 import EncryptedPhotoField, { type FotoRef } from './EncryptedPhotoField'
@@ -342,7 +342,7 @@ export default function RegistroForm({
     if (!initial && registroId) {
       try {
         const token = await buildQrToken(registroId)
-        const dataUrl = await qrToDataUrl(token)
+        const dataUrl = await buildQrFlyerDataUrl(token)
         setQrPanel({
           nombre: form.nombre.trim(),
           dataUrl,

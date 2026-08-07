@@ -83,7 +83,7 @@ export default function QrShareCard({
         </div>
       )}
 
-      <img src={dataUrl} alt="Código QR" className="w-48 h-48 rounded-lg border border-border bg-white p-2" />
+      <img src={dataUrl} alt="Pase de acceso con código QR" className="w-48 h-auto rounded-lg border border-border" />
 
       <div className="flex flex-wrap justify-center gap-2 mt-1">
         <a
