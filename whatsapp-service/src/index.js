@@ -3,6 +3,7 @@ import cors from 'cors'
 import qrcodeTerminal from 'qrcode-terminal'
 import QRCode from 'qrcode'
 import pino from 'pino'
+import { fileURLToPath } from 'node:url'
 import {
   default as makeWASocket,
   useMultiFileAuthState,
@@ -12,7 +13,10 @@ import {
 import { candidatosMexico } from './phone.js'
 
 const PORT = process.env.WHATSAPP_SERVICE_PORT || 3900
-const AUTH_DIR = new URL('../auth', import.meta.url).pathname
+// fileURLToPath (en vez de leer `.pathname` a mano) da la ruta correcta en
+// Windows; `.pathname` deja un "/C:/..." que Windows reinterpreta y duplica
+// la letra de unidad (p.ej. "C:\C:\Users\...").
+const AUTH_DIR = fileURLToPath(new URL('../auth', import.meta.url))
 const logger = pino({ level: 'warn' })
 
 let sock = null
