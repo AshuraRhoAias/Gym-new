@@ -1,10 +1,12 @@
 import { useRef, useState } from 'react'
 import jsQR from 'jsqr'
-import { QrCode, Search, CheckCircle2, Upload, AlertTriangle, XCircle, Loader2 } from 'lucide-react'
+import { QrCode, Search, CheckCircle2, Upload, AlertTriangle, XCircle, Loader2, Camera } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import { readQrToken } from '../lib/qr'
 import EncryptedPhotoViewer from '../components/EncryptedPhotoViewer'
+import QrCameraScanner from '../components/QrCameraScanner'
+import { useHardwareScanner } from '../hooks/useHardwareScanner'
 import { MESES, type Registro } from '../types/database'
 
 interface ScanResult {
@@ -44,6 +46,7 @@ export default function Scanner() {
   const [scanning, setScanning] = useState(false)
   const [scanResult, setScanResult] = useState<ScanResult | null>(null)
   const [scanError, setScanError] = useState<string | null>(null)
+  const [cameraOpen, setCameraOpen] = useState(false)
 
   const search = async (q: string) => {
     setQuery(q)
@@ -81,6 +84,33 @@ export default function Scanner() {
     setQuery('')
   }
 
+  const resolveToken = async (token: string) => {
+    const registroId = await readQrToken(token)
+    if (!registroId) throw new Error('El QR no es válido o no se pudo descifrar')
+
+    const { data: registro, error: fetchErr } = await supabase
+      .from('registros_view')
+      .select('*')
+      .eq('id', registroId)
+      .single()
+    if (fetchErr || !registro) throw new Error('El registro del QR ya no existe')
+
+    const { mes, anio } = currentMonthYear()
+    const { count } = await supabase
+      .from('registros')
+      .select('id', { count: 'exact', head: true })
+      .ilike('nombre', registro.nombre)
+      .eq('mes', mes)
+      .eq('anio', anio)
+      .gt('monto', 0)
+
+    setScanResult({
+      registro,
+      faltanDocumentos: registro.estatus === 'faltan_doc',
+      pagoMesActual: (count ?? 0) > 0,
+    })
+  }
+
   const handleQrFile = async (file: File) => {
     setScanning(true)
     setScanError(null)
@@ -88,37 +118,30 @@ export default function Scanner() {
     try {
       const token = await decodeQrFile(file)
       if (!token) throw new Error('No se detectó ningún código QR en la imagen')
-
-      const registroId = await readQrToken(token)
-      if (!registroId) throw new Error('El QR no es válido o no se pudo descifrar')
-
-      const { data: registro, error: fetchErr } = await supabase
-        .from('registros_view')
-        .select('*')
-        .eq('id', registroId)
-        .single()
-      if (fetchErr || !registro) throw new Error('El registro del QR ya no existe')
-
-      const { mes, anio } = currentMonthYear()
-      const { count } = await supabase
-        .from('registros')
-        .select('id', { count: 'exact', head: true })
-        .ilike('nombre', registro.nombre)
-        .eq('mes', mes)
-        .eq('anio', anio)
-        .gt('monto', 0)
-
-      setScanResult({
-        registro,
-        faltanDocumentos: registro.estatus === 'faltan_doc',
-        pagoMesActual: (count ?? 0) > 0,
-      })
+      await resolveToken(token)
     } catch (err) {
       setScanError(err instanceof Error ? err.message : 'No se pudo leer el QR')
     } finally {
       setScanning(false)
     }
   }
+
+  const handleTokenDetected = async (token: string) => {
+    setCameraOpen(false)
+    setScanning(true)
+    setScanError(null)
+    setScanResult(null)
+    try {
+      await resolveToken(token)
+    } catch (err) {
+      setScanError(err instanceof Error ? err.message : 'No se pudo leer el QR')
+    } finally {
+      setScanning(false)
+    }
+  }
+
+  // Lectores de QR/código de barras USB o Bluetooth: escriben el token como si fuera un teclado.
+  useHardwareScanner(handleTokenDetected, !scanning)
 
   return (
     <div className="max-w-xl mx-auto flex flex-col gap-6">
@@ -127,30 +150,45 @@ export default function Scanner() {
         <h1 className="text-2xl font-semibold text-white">Scanner / Check-in</h1>
       </div>
       <p className="text-sm text-gray-400 text-center -mt-4">
-        Sube la imagen del código QR de acceso (generado al inscribir/renovar) o busca manualmente
-        por nombre o folio.
+        Usa la cámara o cualquier lector de QR conectado, sube la imagen del código QR de acceso, o
+        busca manualmente por nombre o folio.
       </p>
 
       <div className="bg-surface border border-border rounded-xl p-5">
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          className="hidden"
-          onChange={(e) => {
-            const file = e.target.files?.[0]
-            if (file) handleQrFile(file)
-          }}
-        />
-        <button
-          type="button"
-          onClick={() => fileInputRef.current?.click()}
-          disabled={scanning}
-          className="w-full flex items-center justify-center gap-2 border border-dashed border-border rounded-lg py-4 text-sm text-gray-300 hover:border-accent/50 disabled:opacity-60"
-        >
-          {scanning ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />}
-          {scanning ? 'Leyendo QR…' : 'Subir imagen del código QR'}
-        </button>
+        {cameraOpen ? (
+          <QrCameraScanner onDetected={handleTokenDetected} onClose={() => setCameraOpen(false)} />
+        ) : (
+          <div className="flex flex-col sm:flex-row gap-2">
+            <button
+              type="button"
+              onClick={() => setCameraOpen(true)}
+              disabled={scanning}
+              className="flex-1 flex items-center justify-center gap-2 border border-dashed border-border rounded-lg py-4 text-sm text-gray-300 hover:border-accent/50 disabled:opacity-60"
+            >
+              <Camera size={16} /> Usar cámara / lector QR
+            </button>
+
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0]
+                if (file) handleQrFile(file)
+              }}
+            />
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={scanning}
+              className="flex-1 flex items-center justify-center gap-2 border border-dashed border-border rounded-lg py-4 text-sm text-gray-300 hover:border-accent/50 disabled:opacity-60"
+            >
+              {scanning ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />}
+              {scanning ? 'Leyendo QR…' : 'Subir imagen del código QR'}
+            </button>
+          </div>
+        )}
 
         {scanError && (
           <p className="text-sm text-danger bg-danger/10 border border-danger/30 rounded-lg px-3 py-2 mt-3">
