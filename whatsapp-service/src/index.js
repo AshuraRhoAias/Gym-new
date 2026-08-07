@@ -12,6 +12,18 @@ import {
 } from '@whiskeysockets/baileys'
 import { candidatosMexico } from './phone.js'
 
+// Baileys registra internamente ciertos errores de descifrado (p. ej. al
+// recibir un mensaje "peer" de sincronización justo después de vincular la
+// sesión) pero el error igual escapa como rechazo/excepción no capturada, lo
+// que mata el proceso — y con él, todo `npm run dev` vía concurrently. Se
+// intercepta a nivel de proceso para solo loguear y seguir corriendo.
+process.on('unhandledRejection', (reason) => {
+  console.error('[whatsapp] unhandledRejection (ignorado):', reason)
+})
+process.on('uncaughtException', (err) => {
+  console.error('[whatsapp] uncaughtException (ignorado):', err)
+})
+
 const PORT = process.env.WHATSAPP_SERVICE_PORT || 3900
 // fileURLToPath (en vez de leer `.pathname` a mano) da la ruta correcta en
 // Windows; `.pathname` deja un "/C:/..." que Windows reinterpreta y duplica
