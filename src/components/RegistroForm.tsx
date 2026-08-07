@@ -195,6 +195,11 @@ export default function RegistroForm({
 
   const faltantes = DOCUMENTOS_REQUERIDOS.filter((d) => !archivos[d]).length
 
+  // En una renovación con folio anterior, los documentos ya se entregaron con ese folio: no se vuelven a pedir.
+  const esRenovacion = form.kind === 'renovacion' || form.kind === 'renovacion_bacho'
+  const folioAnteriorValido = form.folioAnterior.trim() !== '' && form.folioAnterior.trim() !== '0'
+  const requiereDocumentos = !(esRenovacion && folioAnteriorValido)
+
   const update = <K extends keyof FormState>(key: K, value: FormState[K]) =>
     setForm((f) => ({ ...f, [key]: value }))
 
@@ -328,10 +333,11 @@ export default function RegistroForm({
       }
     }
 
+    // Si no se piden documentos (renovación con folio anterior), se consideran entregados desde antes.
     const rows = DOCUMENTOS_REQUERIDOS.map((documento) => ({
       registro_id: registroId,
       documento,
-      entregado: !!archivos[documento],
+      entregado: requiereDocumentos ? !!archivos[documento] : true,
     }))
     await supabase.from('documentos_entregados').upsert(rows, { onConflict: 'registro_id,documento' })
 
@@ -599,39 +605,48 @@ export default function RegistroForm({
         />
       </div>
 
-      <div className="bg-surface-2 border border-border rounded-lg p-4">
-        <div className="flex items-center justify-between mb-1">
-          <h3 className="text-sm font-medium text-white">Documentos Entregados</h3>
-          <span className="text-xs text-gray-400">
-            {DOCUMENTOS_REQUERIDOS.length - faltantes}/{DOCUMENTOS_REQUERIDOS.length}
-          </span>
-        </div>
-        <p className="text-xs text-gray-500 mb-3">
-          Un documento solo cuenta como entregado cuando se le toma una foto o se sube el archivo
-          (se cifra antes de subirse).
-        </p>
-        {archivosLoading ? (
-          <p className="text-xs text-gray-500">Cargando documentos…</p>
-        ) : (
-          <div className="flex flex-col divide-y divide-border border border-border rounded-lg overflow-hidden">
-            {DOCUMENTOS_REQUERIDOS.map((doc) => (
-              <div key={doc} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 bg-surface">
-                <span className="text-xs text-gray-200 min-w-[150px]">{doc}</span>
-                <DocumentoUploadField
-                  registroId={registroIdRef.current}
-                  documento={doc}
-                  archivo={archivos[doc] ?? null}
-                  deferred={!initial}
-                  onUploaded={(archivo) => setArchivos((prev) => ({ ...prev, [doc]: archivo }))}
-                />
-              </div>
-            ))}
+      {requiereDocumentos ? (
+        <div className="bg-surface-2 border border-border rounded-lg p-4">
+          <div className="flex items-center justify-between mb-1">
+            <h3 className="text-sm font-medium text-white">Documentos Entregados</h3>
+            <span className="text-xs text-gray-400">
+              {DOCUMENTOS_REQUERIDOS.length - faltantes}/{DOCUMENTOS_REQUERIDOS.length}
+            </span>
           </div>
-        )}
-        {faltantes > 0 && (
-          <p className="text-xs text-danger mt-3">Faltan {faltantes} documento(s)</p>
-        )}
-      </div>
+          <p className="text-xs text-gray-500 mb-3">
+            Un documento solo cuenta como entregado cuando se le toma una foto o se sube el archivo
+            (se cifra antes de subirse).
+          </p>
+          {archivosLoading ? (
+            <p className="text-xs text-gray-500">Cargando documentos…</p>
+          ) : (
+            <div className="flex flex-col divide-y divide-border border border-border rounded-lg overflow-hidden">
+              {DOCUMENTOS_REQUERIDOS.map((doc) => (
+                <div key={doc} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 bg-surface">
+                  <span className="text-xs text-gray-200 min-w-[150px]">{doc}</span>
+                  <DocumentoUploadField
+                    registroId={registroIdRef.current}
+                    documento={doc}
+                    archivo={archivos[doc] ?? null}
+                    deferred={!initial}
+                    onUploaded={(archivo) => setArchivos((prev) => ({ ...prev, [doc]: archivo }))}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+          {faltantes > 0 && (
+            <p className="text-xs text-danger mt-3">Faltan {faltantes} documento(s)</p>
+          )}
+        </div>
+      ) : (
+        <div className="bg-surface-2 border border-border rounded-lg p-4">
+          <h3 className="text-sm font-medium text-white mb-1">Documentos Entregados</h3>
+          <p className="text-xs text-gray-500">
+            No se piden de nuevo: ya se entregaron con el folio anterior ({form.folioAnterior.trim()}).
+          </p>
+        </div>
+      )}
 
       <div>
         <label className="block text-xs text-gray-400 mb-1.5">Foto del alumno</label>
