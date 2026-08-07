@@ -3,7 +3,7 @@ import { MessageCircle, Send, Loader2, CheckCircle2, Search } from 'lucide-react
 import { usePeriod } from '../context/PeriodContext'
 import { usePeriodRegistros } from '../hooks/usePeriodRegistros'
 import { decryptText } from '../lib/crypto'
-import { buildQrToken, qrToDataUrl } from '../lib/qr'
+import { buildQrToken, buildQrFlyerDataUrl } from '../lib/qr'
 import { checkWhatsAppNumber, sendQrByWhatsApp, WHATSAPP_ERROR_LABEL } from '../lib/whatsappService'
 import PeriodSelector from '../components/PeriodSelector'
 import StatusBadge from '../components/StatusBadge'
@@ -71,7 +71,7 @@ export default function Whats() {
       }
       setEnvioEstado(registroId, 'enviando')
       const token = await buildQrToken(registroId)
-      const dataUrl = await qrToDataUrl(token)
+      const dataUrl = await buildQrFlyerDataUrl(token)
       const caption = mensaje.replaceAll('{nombre}', nombre) || `Hola ${nombre}, aquí está tu código QR de acceso.`
       await sendQrByWhatsApp({ telefono, imagenBase64: dataUrl, caption })
       setEnvioEstado(registroId, 'enviado')
