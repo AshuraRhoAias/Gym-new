@@ -1,11 +1,11 @@
 import type { ReactNode } from 'react'
-import { Navigate, useLocation } from 'react-router-dom'
+import { Redirect, useLocation } from 'wouter'
 import { useAuth } from '../context/AuthContext'
 import { isRouteAllowed } from '../lib/permissions'
 
 export default function RoleRoute({ children }: { children: ReactNode }) {
   const { role, session } = useAuth()
-  const location = useLocation()
+  const [pathname] = useLocation()
 
   if (session && role === null) {
     return (
@@ -15,8 +15,8 @@ export default function RoleRoute({ children }: { children: ReactNode }) {
     )
   }
 
-  if (!isRouteAllowed(role, location.pathname)) {
-    return <Navigate to="/" replace />
+  if (!isRouteAllowed(role, pathname)) {
+    return <Redirect to="/" replace />
   }
 
   return <>{children}</>

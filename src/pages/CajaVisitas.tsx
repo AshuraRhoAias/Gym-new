@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link } from 'wouter'
 import { Plus, RefreshCw } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import StatCard from '../components/StatCard'
@@ -55,7 +55,7 @@ export default function CajaVisitas() {
             <RefreshCw size={14} /> Actualizar
           </button>
           <Link
-            to="/registros-visitas"
+            href="/registros-visitas"
             className="flex items-center gap-1.5 bg-accent hover:bg-accent-dark text-black rounded-lg px-3 py-2 text-sm font-medium"
           >
             <Plus size={14} /> Nueva Visita

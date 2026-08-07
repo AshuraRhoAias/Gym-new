@@ -1,5 +1,5 @@
 import { lazy, Suspense, type ReactNode } from 'react'
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { Router, Switch, Route } from 'wouter'
 import { AuthProvider } from './context/AuthContext'
 import { PeriodProvider } from './context/PeriodContext'
 import { PrivacyProvider } from './context/PrivacyContext'
@@ -46,44 +46,43 @@ export default function App() {
     <AuthProvider>
       <PeriodProvider>
         <PrivacyProvider>
-          <BrowserRouter>
-            <Routes>
-              <Route path="/login" element={<Login />} />
-              <Route
-                element={
-                  <ProtectedRoute>
-                    <Layout />
-                  </ProtectedRoute>
-                }
-              >
-                <Route path="/" element={guarded(<Dashboard />)} />
-                <Route path="/inscripciones" element={guarded(<Inscripciones />)} />
-                <Route path="/renovaciones" element={guarded(<Renovaciones />)} />
-                <Route path="/registros-visitas" element={guarded(<RegistroVisita />)} />
-                <Route path="/caja-visitas" element={guarded(<CajaVisitas />)} />
-                <Route path="/scanner" element={guarded(<Scanner />)} />
-                <Route path="/reportes" element={guarded(<Reportes />)} />
-                <Route path="/payment-monitor" element={guarded(<PaymentMonitor />)} />
-                <Route path="/enum" element={guarded(<Enum />)} />
-                <Route path="/dia" element={guarded(<ReporteDia />)} />
-                <Route path="/completos" element={guarded(<Completos />)} />
-                <Route path="/faltan" element={guarded(<Faltan />)} />
-                <Route path="/usuarios" element={guarded(<Usuarios />)} />
-                <Route path="/auditoria" element={guarded(<Auditoria />)} />
-                <Route path="/nomina" element={guarded(<Nomina />)} />
-                <Route path="/finanzas" element={guarded(<Finanzas />)} />
-                <Route path="/whats" element={guarded(<Whats />)} />
-                <Route
-                  path="*"
-                  element={
-                    <Suspense fallback={<PageFallback />}>
-                      <ComingSoon title="Página no encontrada" />
-                    </Suspense>
-                  }
-                />
+          <Router>
+            <Switch>
+              <Route path="/login">
+                <Login />
               </Route>
-            </Routes>
-          </BrowserRouter>
+              <Route>
+                <ProtectedRoute>
+                  <Layout>
+                    <Switch>
+                      <Route path="/">{guarded(<Dashboard />)}</Route>
+                      <Route path="/inscripciones">{guarded(<Inscripciones />)}</Route>
+                      <Route path="/renovaciones">{guarded(<Renovaciones />)}</Route>
+                      <Route path="/registros-visitas">{guarded(<RegistroVisita />)}</Route>
+                      <Route path="/caja-visitas">{guarded(<CajaVisitas />)}</Route>
+                      <Route path="/scanner">{guarded(<Scanner />)}</Route>
+                      <Route path="/reportes">{guarded(<Reportes />)}</Route>
+                      <Route path="/payment-monitor">{guarded(<PaymentMonitor />)}</Route>
+                      <Route path="/enum">{guarded(<Enum />)}</Route>
+                      <Route path="/dia">{guarded(<ReporteDia />)}</Route>
+                      <Route path="/completos">{guarded(<Completos />)}</Route>
+                      <Route path="/faltan">{guarded(<Faltan />)}</Route>
+                      <Route path="/usuarios">{guarded(<Usuarios />)}</Route>
+                      <Route path="/auditoria">{guarded(<Auditoria />)}</Route>
+                      <Route path="/nomina">{guarded(<Nomina />)}</Route>
+                      <Route path="/finanzas">{guarded(<Finanzas />)}</Route>
+                      <Route path="/whats">{guarded(<Whats />)}</Route>
+                      <Route>
+                        <Suspense fallback={<PageFallback />}>
+                          <ComingSoon title="Página no encontrada" />
+                        </Suspense>
+                      </Route>
+                    </Switch>
+                  </Layout>
+                </ProtectedRoute>
+              </Route>
+            </Switch>
+          </Router>
         </PrivacyProvider>
       </PeriodProvider>
     </AuthProvider>

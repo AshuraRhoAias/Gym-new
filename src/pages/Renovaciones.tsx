@@ -1,13 +1,13 @@
 import { useMemo, useState } from 'react'
 import { Search } from 'lucide-react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation } from 'wouter'
 import { supabase } from '../lib/supabase'
 import { decryptText } from '../lib/crypto'
 import RegistroForm from '../components/RegistroForm'
 import type { Registro } from '../types/database'
 
 export default function Renovaciones() {
-  const navigate = useNavigate()
+  const [, navigate] = useLocation()
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<Registro[]>([])
   const [selected, setSelected] = useState<Registro | null>(null)

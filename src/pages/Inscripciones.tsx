@@ -1,8 +1,8 @@
-import { useNavigate } from 'react-router-dom'
+import { useLocation } from 'wouter'
 import RegistroForm from '../components/RegistroForm'
 
 export default function Inscripciones() {
-  const navigate = useNavigate()
+  const [, navigate] = useLocation()
 
   return (
     <div className="flex flex-col gap-6">
