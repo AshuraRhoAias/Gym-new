@@ -1,8 +1,9 @@
 import { useRef, useState } from 'react'
-import { CheckCircle2, Loader2, Paperclip, Eye } from 'lucide-react'
+import { CheckCircle2, Loader2, Paperclip, Eye, ScanLine } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { encryptBytes, decryptBytes } from '../lib/crypto'
 import { useAuth } from '../context/AuthContext'
+import CameraCaptureModal from './CameraCaptureModal'
 import type { DocumentoArchivo } from '../types/database'
 
 const BUCKET = 'documentos'
@@ -34,6 +35,7 @@ export default function DocumentoUploadField({
   const [viewing, setViewing] = useState(false)
   const [viewUrl, setViewUrl] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [scanOpen, setScanOpen] = useState(false)
 
   const handleFile = async (file: File) => {
     setUploading(true)
@@ -128,6 +130,14 @@ export default function DocumentoUploadField({
           {uploading ? <Loader2 size={11} className="animate-spin" /> : <Paperclip size={11} />}
           {uploading ? 'Subiendo…' : archivo ? 'Reemplazar' : 'Adjuntar foto/archivo'}
         </button>
+        <button
+          type="button"
+          onClick={() => setScanOpen(true)}
+          disabled={uploading}
+          className="flex items-center gap-1 text-xs bg-surface-2 border border-border rounded-md px-2 py-1 text-gray-300 hover:border-accent/50 disabled:opacity-60"
+        >
+          <ScanLine size={11} /> Escanear
+        </button>
         {archivo && (
           <>
             <CheckCircle2 size={13} className="text-accent shrink-0" />
@@ -148,6 +158,16 @@ export default function DocumentoUploadField({
         <a href={viewUrl} target="_blank" rel="noreferrer" className="text-xs text-accent underline">
           Abrir archivo descifrado
         </a>
+      )}
+      {scanOpen && (
+        <CameraCaptureModal
+          title={`Escanear: ${documento}`}
+          onClose={() => setScanOpen(false)}
+          onCapture={(file) => {
+            setScanOpen(false)
+            handleFile(file)
+          }}
+        />
       )}
     </div>
   )
