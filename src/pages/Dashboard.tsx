@@ -14,6 +14,7 @@ import RegistroForm from '../components/RegistroForm'
 import EncryptedPhotoViewer from '../components/EncryptedPhotoViewer'
 import ExpedienteModal from '../components/ExpedienteModal'
 import Masked from '../components/Masked'
+import MaskedCount from '../components/MaskedCount'
 import { useRegistros } from '../hooks/useRegistros'
 import { PAGO_LABEL, type Registro, type RecordKind } from '../types/database'
 
@@ -131,10 +132,10 @@ export default function Dashboard() {
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard label="Inscripciones" value={countInscripcion} hint={`en ${mes}`} icon={FileText} accent="text-accent" />
-        <StatCard label="Renovaciones" value={countRenovacion} hint={`en ${mes}`} icon={RefreshCw} accent="text-info" />
-        <StatCard label="Inscripciones Bacho" value={countInscripcionBacho} hint={`en ${mes}`} icon={FileText} accent="text-warning" />
-        <StatCard label="Renovaciones Bacho" value={countRenovacionBacho} hint={`en ${mes}`} icon={RefreshCw} accent="text-danger" />
+        <StatCard label="Inscripciones" value={<MaskedCount value={countInscripcion} />} hint={`en ${mes}`} icon={FileText} accent="text-accent" />
+        <StatCard label="Renovaciones" value={<MaskedCount value={countRenovacion} />} hint={`en ${mes}`} icon={RefreshCw} accent="text-info" />
+        <StatCard label="Inscripciones Bacho" value={<MaskedCount value={countInscripcionBacho} />} hint={`en ${mes}`} icon={FileText} accent="text-warning" />
+        <StatCard label="Renovaciones Bacho" value={<MaskedCount value={countRenovacionBacho} />} hint={`en ${mes}`} icon={RefreshCw} accent="text-danger" />
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border">

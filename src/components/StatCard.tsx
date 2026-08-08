@@ -1,8 +1,9 @@
 import type { LucideIcon } from 'lucide-react'
+import type { ReactNode } from 'react'
 
 interface StatCardProps {
   label: string
-  value: string | number
+  value: ReactNode
   hint?: string
   icon: LucideIcon
   accent?: string

@@ -7,6 +7,7 @@ import PeriodSelector from '../components/PeriodSelector'
 import MiniStat from '../components/MiniStat'
 import StatusBadge from '../components/StatusBadge'
 import Masked from '../components/Masked'
+import MaskedCount from '../components/MaskedCount'
 import { PAGO_LABEL } from '../types/database'
 
 export default function Reportes() {
@@ -47,13 +48,13 @@ export default function Reportes() {
       ) : (
         <>
           <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
-            <MiniStat label="Total General" value={data.length} color="purple" />
-            <MiniStat label="Bachilleres" value={stats.bachilleres.length} color="violet" />
-            <MiniStat label="Faltan Doc" value={stats.faltanDoc.length} color="red" />
-            <MiniStat label="Tramitar Hoja" value={stats.tramitarHoja.length} color="amber" />
-            <MiniStat label="Completados" value={stats.completados.length} color="blue" />
-            <MiniStat label="Entregados" value={stats.entregados.length} color="green" />
-            <MiniStat label="Pendientes" value={stats.pendientes.length} color="orange" />
+            <MiniStat label="Total General" value={<MaskedCount value={data.length} />} color="purple" />
+            <MiniStat label="Bachilleres" value={<MaskedCount value={stats.bachilleres.length} />} color="violet" />
+            <MiniStat label="Faltan Doc" value={<MaskedCount value={stats.faltanDoc.length} />} color="red" />
+            <MiniStat label="Tramitar Hoja" value={<MaskedCount value={stats.tramitarHoja.length} />} color="amber" />
+            <MiniStat label="Completados" value={<MaskedCount value={stats.completados.length} />} color="blue" />
+            <MiniStat label="Entregados" value={<MaskedCount value={stats.entregados.length} />} color="green" />
+            <MiniStat label="Pendientes" value={<MaskedCount value={stats.pendientes.length} />} color="orange" />
           </div>
 
           <ReportSection title="Convenio con Bachilleres (PRIORIDAD ABSOLUTA)" color="purple" rows={stats.bachilleres} />
@@ -86,7 +87,9 @@ function ReportSection({
     <div className="bg-surface border border-border rounded-xl overflow-hidden">
       <div className={`flex items-center justify-between px-4 py-2.5 ${headerColor[color]}`}>
         <span className="text-sm font-medium">{title}</span>
-        <span className="text-xs bg-black/20 rounded-full px-2 py-0.5">{rows.length}</span>
+        <span className="text-xs bg-black/20 rounded-full px-2 py-0.5">
+          <MaskedCount value={rows.length} />
+        </span>
       </div>
       {rows.length === 0 ? (
         <p className="text-sm text-gray-500 text-center py-6">No hay datos para mostrar</p>
