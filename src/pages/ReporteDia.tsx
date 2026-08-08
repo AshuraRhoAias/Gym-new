@@ -4,7 +4,6 @@ import { supabase } from '../lib/supabase'
 import { usePrivacy, tieneFolio } from '../context/PrivacyContext'
 import { PAGO_LABEL, type Registro } from '../types/database'
 import Masked from '../components/Masked'
-import MaskedCount from '../components/MaskedCount'
 
 function todayInput() {
   return new Date().toISOString().slice(0, 10)
@@ -89,21 +88,15 @@ export default function ReporteDia() {
         <>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="bg-surface border border-border rounded-xl p-4 text-center">
-              <div className="text-3xl font-bold text-white">
-                <MaskedCount value={registros.length} />
-              </div>
+              <div className="text-3xl font-bold text-white">{registros.length}</div>
               <div className="text-xs text-gray-500 mt-1">Total Registros</div>
             </div>
             <div className="bg-surface border border-border rounded-xl p-4 text-center">
-              <div className="text-3xl font-bold text-accent">
-                <MaskedCount value={stats.inscripciones.length} />
-              </div>
+              <div className="text-3xl font-bold text-accent">{stats.inscripciones.length}</div>
               <div className="text-xs text-gray-500 mt-1">Inscripciones</div>
             </div>
             <div className="bg-surface border border-border rounded-xl p-4 text-center">
-              <div className="text-3xl font-bold text-info">
-                <MaskedCount value={stats.renovaciones.length} />
-              </div>
+              <div className="text-3xl font-bold text-info">{stats.renovaciones.length}</div>
               <div className="text-xs text-gray-500 mt-1">Renovaciones</div>
             </div>
             <div className="bg-surface border border-border rounded-xl p-4 text-center">
