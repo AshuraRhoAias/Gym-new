@@ -1,3 +1,5 @@
+import type { ReactNode } from 'react'
+
 const COLORS: Record<string, string> = {
   purple: 'bg-purple-500/15 text-purple-300 border-purple-500/30',
   green: 'bg-accent/15 text-accent border-accent/30',
@@ -10,7 +12,7 @@ const COLORS: Record<string, string> = {
 
 interface MiniStatProps {
   label: string
-  value: string | number
+  value: ReactNode
   color?: keyof typeof COLORS
 }
 

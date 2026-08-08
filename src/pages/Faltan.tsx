@@ -6,6 +6,7 @@ import { supabase } from '../lib/supabase'
 import PeriodSelector from '../components/PeriodSelector'
 import PhoneReveal from '../components/PhoneReveal'
 import Masked from '../components/Masked'
+import MaskedCount from '../components/MaskedCount'
 import type { Registro } from '../types/database'
 
 interface RegistroConFaltantes extends Registro {
@@ -90,11 +91,15 @@ export default function Faltan() {
 
       <div className="bg-surface border border-border rounded-xl px-5 py-4 flex flex-wrap items-center gap-8">
         <div>
-          <div className="text-3xl font-bold text-white">{registrosVisibles.length}</div>
+          <div className="text-3xl font-bold text-white">
+            <MaskedCount value={registrosVisibles.length} />
+          </div>
           <div className="text-xs text-gray-500">Total con documentos faltantes</div>
         </div>
         <div>
-          <div className="text-3xl font-bold text-danger">{totalTipos}</div>
+          <div className="text-3xl font-bold text-danger">
+            <MaskedCount value={totalTipos} />
+          </div>
           <div className="text-xs text-gray-500">Tipos de documentos faltantes</div>
         </div>
       </div>

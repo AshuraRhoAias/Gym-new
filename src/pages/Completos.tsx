@@ -7,6 +7,7 @@ import PeriodSelector from '../components/PeriodSelector'
 import StatusBadge from '../components/StatusBadge'
 import PhoneReveal from '../components/PhoneReveal'
 import Masked from '../components/Masked'
+import MaskedCount from '../components/MaskedCount'
 import { PAGO_LABEL } from '../types/database'
 
 export default function Completos() {
@@ -47,12 +48,14 @@ export default function Completos() {
 
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
         <div className="bg-surface border border-accent/40 rounded-xl p-4 text-center">
-          <div className="text-3xl font-bold text-accent">{completos.length}</div>
+          <div className="text-3xl font-bold text-accent">
+            <MaskedCount value={completos.length} />
+          </div>
           <div className="text-xs text-gray-500 mt-1">Total Completados</div>
         </div>
         <div className="bg-surface border border-border rounded-xl p-4 text-center">
           <div className="text-3xl font-bold text-white">
-            {completos.filter((r) => r.kind.startsWith('renovacion')).length}
+            <MaskedCount value={completos.filter((r) => r.kind.startsWith('renovacion')).length} />
           </div>
           <div className="text-xs text-gray-500 mt-1">Renovaciones</div>
         </div>
