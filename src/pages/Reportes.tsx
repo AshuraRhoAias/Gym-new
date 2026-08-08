@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { BarChart3 } from 'lucide-react'
 import { usePeriod } from '../context/PeriodContext'
-import { usePrivacy, tieneFolio } from '../context/PrivacyContext'
+import { usePrivacy } from '../context/PrivacyContext'
 import { usePeriodRegistros } from '../hooks/usePeriodRegistros'
 import PeriodSelector from '../components/PeriodSelector'
 import MiniStat from '../components/MiniStat'
@@ -12,12 +12,7 @@ import { PAGO_LABEL } from '../types/database'
 export default function Reportes() {
   const { mes, anio } = usePeriod()
   const { hideSinFolio } = usePrivacy()
-  const { data: dataCompleta, loading } = usePeriodRegistros(mes, anio)
-
-  const data = useMemo(
-    () => (hideSinFolio ? dataCompleta.filter((r) => tieneFolio(r.folio)) : dataCompleta),
-    [dataCompleta, hideSinFolio],
-  )
+  const { data, loading } = usePeriodRegistros(mes, anio, hideSinFolio)
 
   const stats = useMemo(() => {
     const bachilleres = data.filter((r) => r.bachillerato)

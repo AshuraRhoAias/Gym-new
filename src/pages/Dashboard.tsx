@@ -96,7 +96,7 @@ export default function Dashboard() {
   const [expediente, setExpediente] = useState<Registro | null>(null)
   const [deleting, setDeleting] = useState<string | null>(null)
 
-  const { data, loading, refresh } = useRegistros(tab, mes, anio)
+  const { data, loading, refresh } = useRegistros(tab, mes, anio, hideSinFolio)
 
   const handleDelete = async (r: Registro) => {
     if (!confirm(`¿Borrar el registro de "${r.nombre}"? Esta acción no se puede deshacer.`)) return
@@ -112,13 +112,12 @@ export default function Dashboard() {
   const countRenovacionBacho = useCount('renovacion_bacho', mes, anio, hideSinFolio)
 
   const filtered = useMemo(() => {
-    const visibles = hideSinFolio ? data.filter((r) => tieneFolio(r.folio)) : data
-    if (!search.trim()) return visibles
+    if (!search.trim()) return data
     const q = search.toLowerCase()
-    return visibles.filter(
+    return data.filter(
       (r) => r.nombre.toLowerCase().includes(q) || (r.folio ?? '').toLowerCase().includes(q),
     )
-  }, [data, search, hideSinFolio])
+  }, [data, search])
 
   return (
     <div className="flex flex-col gap-6">
