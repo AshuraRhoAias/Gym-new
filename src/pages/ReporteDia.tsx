@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { CalendarDays, Search } from 'lucide-react'
 import { supabase } from '../lib/supabase'
-import { usePrivacy, tieneFolio } from '../context/PrivacyContext'
+import { usePrivacy } from '../context/PrivacyContext'
 import { PAGO_LABEL, type Registro } from '../types/database'
 import Masked from '../components/Masked'
 
@@ -15,29 +15,27 @@ export default function ReporteDia() {
   const [registrosCompletos, setRegistrosCompletos] = useState<Registro[]>([])
   const [loading, setLoading] = useState(false)
 
-  const registros = useMemo(
-    () => (hideSinFolio ? registrosCompletos.filter((r) => tieneFolio(r.folio)) : registrosCompletos),
-    [registrosCompletos, hideSinFolio],
-  )
+  const registros = registrosCompletos
 
-  const consultar = async (dia: string) => {
+  const consultar = async (dia: string, ocultarSinFolio: boolean) => {
     setLoading(true)
     const start = `${dia}T00:00:00.000Z`
     const end = `${dia}T23:59:59.999Z`
-    const { data } = await supabase
+    let query = supabase
       .from('registros')
       .select('*')
       .gte('fecha_ingreso', start)
       .lte('fecha_ingreso', end)
-      .order('fecha_ingreso', { ascending: true })
+    if (ocultarSinFolio) query = query.not('folio', 'is', null).neq('folio', '0')
+    const { data } = await query.order('fecha_ingreso', { ascending: true })
     setRegistrosCompletos(data ?? [])
     setLoading(false)
   }
 
   useEffect(() => {
-    consultar(fecha)
+    consultar(fecha, hideSinFolio)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [hideSinFolio])
 
   const stats = useMemo(() => {
     const inscripciones = registros.filter((r) => r.kind === 'inscripcion' || r.kind === 'inscripcion_bacho')
@@ -73,7 +71,7 @@ export default function ReporteDia() {
             className="bg-surface-2 border border-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-accent"
           />
           <button
-            onClick={() => consultar(fecha)}
+            onClick={() => consultar(fecha, hideSinFolio)}
             className="flex items-center gap-1.5 bg-accent hover:bg-accent-dark text-black rounded-lg px-4 py-2 text-sm font-medium"
           >
             <Search size={14} /> Consultar

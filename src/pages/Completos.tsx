@@ -12,15 +12,12 @@ import { PAGO_LABEL } from '../types/database'
 export default function Completos() {
   const { mes, anio } = usePeriod()
   const { hideSinFolio } = usePrivacy()
-  const { data, loading } = usePeriodRegistros(mes, anio)
+  const { data, loading } = usePeriodRegistros(mes, anio, hideSinFolio)
   const [search, setSearch] = useState('')
 
   const completos = useMemo(
-    () =>
-      data.filter(
-        (r) => (r.estatus === 'completo' || r.estatus === 'entregado') && (!hideSinFolio || tieneFolio(r.folio)),
-      ),
-    [data, hideSinFolio],
+    () => data.filter((r) => r.estatus === 'completo' || r.estatus === 'entregado'),
+    [data],
   )
 
   const filtered = useMemo(() => {

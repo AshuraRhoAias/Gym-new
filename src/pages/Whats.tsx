@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { MessageCircle, Send, Loader2, CheckCircle2, Search } from 'lucide-react'
 import { usePeriod } from '../context/PeriodContext'
-import { usePrivacy, tieneFolio } from '../context/PrivacyContext'
+import { usePrivacy } from '../context/PrivacyContext'
 import { usePeriodRegistros } from '../hooks/usePeriodRegistros'
 import { decryptText } from '../lib/crypto'
 import { buildQrToken, buildQrFlyerDataUrl } from '../lib/qr'
@@ -17,11 +17,7 @@ type EnvioEstado = 'idle' | 'validando' | 'enviando' | 'enviado' | 'error'
 export default function Whats() {
   const { mes, anio } = usePeriod()
   const { hideSinFolio } = usePrivacy()
-  const { data: dataCompleta, loading } = usePeriodRegistros(mes, anio)
-  const data = useMemo(
-    () => (hideSinFolio ? dataCompleta.filter((r) => tieneFolio(r.folio)) : dataCompleta),
-    [dataCompleta, hideSinFolio],
-  )
+  const { data, loading } = usePeriodRegistros(mes, anio, hideSinFolio)
   const [telefonos, setTelefonos] = useState<Record<string, string>>({})
   const [decryptando, setDecryptando] = useState(false)
   const [mensaje, setMensaje] = useState(MENSAJE_DEFAULT)
