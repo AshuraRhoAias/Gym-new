@@ -29,3 +29,5 @@ whatsapp-service/auth/*
 *.njsproj
 *.sln
 *.sw?
+.vercel
+.env*
