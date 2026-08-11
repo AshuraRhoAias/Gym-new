@@ -1,3 +1,5 @@
+import { WHATSAPP_ENABLED } from './featureFlags'
+
 export type Role = 'superadmin' | 'admin' | 'editor' | 'viewer'
 
 export const ROLE_LABEL: Record<Role, string> = {
@@ -34,6 +36,7 @@ const SUPERADMIN_ONLY_ROUTES = ['/usuarios']
 
 export function isRouteAllowed(role: Role | null, path: string): boolean {
   if (!role) return false
+  if (path === '/whats' && !WHATSAPP_ENABLED) return false
   if (role === 'superadmin') return true
   if (SUPERADMIN_ONLY_ROUTES.includes(path)) return false
   if (role === 'admin') return true
