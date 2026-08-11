@@ -62,3 +62,20 @@ export async function decryptBytes(payload: CipherPayload): Promise<Uint8Array> 
   for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
   return bytes
 }
+
+/** Descarga, descifra y abre en una pestaña nueva un comprobante (foto/PDF) subido con ComprobanteCfdiField. */
+export async function abrirComprobante(
+  bucket: string,
+  comprobante: { comprobante_path: string; comprobante_iv: string; comprobante_salt: string; comprobante_mime: string | null },
+) {
+  const { data, error } = await supabase.storage.from(bucket).download(comprobante.comprobante_path)
+  if (error || !data) throw error ?? new Error('No se encontró el comprobante')
+  const cipherBytes = new Uint8Array(await data.arrayBuffer())
+  const cipherB64 = btoa(String.fromCharCode(...cipherBytes))
+  const plainBytes = await decryptBytes({ c: cipherB64, iv: comprobante.comprobante_iv, s: comprobante.comprobante_salt })
+  const blob = new Blob([plainBytes.buffer as ArrayBuffer], {
+    type: comprobante.comprobante_mime || 'application/octet-stream',
+  })
+  const url = URL.createObjectURL(blob)
+  window.open(url, '_blank', 'noopener,noreferrer')
+}

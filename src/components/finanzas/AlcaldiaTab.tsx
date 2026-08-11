@@ -150,6 +150,11 @@ export default function AlcaldiaTab({
     onChanged()
   }
 
+  const updateTicketComprobante = async (id: string, patch: Partial<AlcaldiaTicket>) => {
+    await supabase.from('alcaldia_tickets').update(patch).eq('id', id)
+    onChanged()
+  }
+
   const handleGuardarPagoConvenio = async (e: FormEvent) => {
     e.preventDefault()
     const montoNum = Number(pagoConvenioMonto)
@@ -410,14 +415,27 @@ export default function AlcaldiaTab({
             </form>
             <div className="divide-y divide-border/50">
               {tickets.map((t) => (
-                <div key={t.id} className="flex items-center justify-between px-3 py-1.5 text-xs">
-                  <span className="text-gray-300">{t.folio || 'Sin folio'}</span>
-                  <div className="flex items-center gap-2">
-                    <span className="text-white">${t.monto.toFixed(2)}</span>
-                    <button onClick={() => handleBorrarTicket(t.id)} className="text-gray-500 hover:text-danger">
-                      <Trash2 size={13} />
-                    </button>
+                <div key={t.id} className="flex flex-col gap-2 px-3 py-2">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-gray-300">{t.folio || 'Sin folio'}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-white">${t.monto.toFixed(2)}</span>
+                      <button onClick={() => handleBorrarTicket(t.id)} className="text-gray-500 hover:text-danger">
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
                   </div>
+                  <ComprobanteCfdiField
+                    folio={t.folio ?? ''}
+                    onFolioChange={(v) => updateTicketComprobante(t.id, { folio: v || null })}
+                    comprobante={{
+                      comprobante_path: t.comprobante_path,
+                      comprobante_iv: t.comprobante_iv,
+                      comprobante_salt: t.comprobante_salt,
+                      comprobante_mime: t.comprobante_mime,
+                    }}
+                    onComprobanteChange={(v) => updateTicketComprobante(t.id, v)}
+                  />
                 </div>
               ))}
               {tickets.length === 0 && <p className="text-xs text-gray-500 text-center py-3">Sin tickets registrados.</p>}

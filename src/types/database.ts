@@ -237,6 +237,10 @@ export interface AlcaldiaTicket {
   folio: string | null
   monto: number
   created_at: string
+  comprobante_path: string | null
+  comprobante_iv: string | null
+  comprobante_salt: string | null
+  comprobante_mime: string | null
 }
 
 export type CategoriaGasto =
