@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import { Paperclip, Loader2, Eye, CheckCircle2 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
-import { encryptBytes, decryptBytes } from '../lib/crypto'
+import { encryptBytes, abrirComprobante } from '../lib/crypto'
 import type { ComprobanteCfdi } from '../types/database'
 
 const BUCKET = 'comprobantes-financieros'
@@ -55,16 +55,12 @@ export default function ComprobanteCfdiField({
     setViewing(true)
     setError(null)
     try {
-      const { data, error: dlErr } = await supabase.storage.from(BUCKET).download(comprobante.comprobante_path)
-      if (dlErr || !data) throw dlErr ?? new Error('No se encontró el comprobante')
-      const cipherBytes = new Uint8Array(await data.arrayBuffer())
-      const cipherB64 = btoa(String.fromCharCode(...cipherBytes))
-      const plainBytes = await decryptBytes({ c: cipherB64, iv: comprobante.comprobante_iv, s: comprobante.comprobante_salt })
-      const blob = new Blob([plainBytes.buffer as ArrayBuffer], {
-        type: comprobante.comprobante_mime || 'application/octet-stream',
+      await abrirComprobante(BUCKET, {
+        comprobante_path: comprobante.comprobante_path,
+        comprobante_iv: comprobante.comprobante_iv,
+        comprobante_salt: comprobante.comprobante_salt,
+        comprobante_mime: comprobante.comprobante_mime,
       })
-      const url = URL.createObjectURL(blob)
-      window.open(url, '_blank', 'noopener,noreferrer')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudo abrir el comprobante')
     } finally {

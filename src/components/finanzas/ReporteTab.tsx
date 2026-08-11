@@ -1,8 +1,9 @@
 import { useMemo } from 'react'
-import { Download, FileSpreadsheet, Printer } from 'lucide-react'
+import { Download, FileSpreadsheet, Printer, FileCheck2 } from 'lucide-react'
 import { MESES, CATEGORIA_GASTO_LABEL } from '../../types/database'
 import type {
   AlcaldiaTicket,
+  ComprobanteCfdi,
   ConvenioPago,
   GastoOperativo,
   NominaMensual,
@@ -11,6 +12,7 @@ import type {
 } from '../../types/database'
 import type { IngresoPeriodo } from '../../hooks/useFinanzas'
 import { calcularResumen, exportarExcel, type ResumenPeriodo } from '../../lib/finanzas'
+import VerComprobante from '../VerComprobante'
 
 interface Props {
   mes: string
@@ -27,6 +29,13 @@ interface Props {
 
 function periodoOrden(mes: string, anio: number) {
   return anio * 100 + MESES.indexOf(mes)
+}
+
+interface ComprobanteRow {
+  concepto: string
+  folio: string | null
+  monto: number
+  comprobante: Pick<ComprobanteCfdi, 'comprobante_path' | 'comprobante_iv' | 'comprobante_salt' | 'comprobante_mime'>
 }
 
 export default function ReporteTab({
@@ -78,6 +87,78 @@ export default function ReporteTab({
   }, [gastosOperativos, mes, anio])
 
   const nombrePorId = useMemo(() => Object.fromEntries(trabajadores.map((t) => [t.id, t.nombre])), [trabajadores])
+
+  const comprobantes = useMemo<ComprobanteRow[]>(() => {
+    const rows: ComprobanteRow[] = []
+    const pago = pagosAlcaldia.find((p) => p.mes === mes && p.anio === anio)
+
+    if (pago) {
+      rows.push({
+        concepto: 'Renta Alcaldía',
+        folio: pago.folio_comprobante,
+        monto: pago.monto_renta,
+        comprobante: {
+          comprobante_path: pago.comprobante_path,
+          comprobante_iv: pago.comprobante_iv,
+          comprobante_salt: pago.comprobante_salt,
+          comprobante_mime: pago.comprobante_mime,
+        },
+      })
+      rows.push({
+        concepto: 'Cálculo de convenio',
+        folio: pago.folio_calculo_convenio,
+        monto: pago.monto_convenio,
+        comprobante: {
+          comprobante_path: pago.convenio_comprobante_path,
+          comprobante_iv: pago.convenio_comprobante_iv,
+          comprobante_salt: pago.convenio_comprobante_salt,
+          comprobante_mime: pago.convenio_comprobante_mime,
+        },
+      })
+      for (const t of alcaldiaTickets.filter((t) => t.pago_alcaldia_id === pago.id)) {
+        rows.push({
+          concepto: 'Ticket de renta',
+          folio: t.folio,
+          monto: t.monto,
+          comprobante: {
+            comprobante_path: t.comprobante_path,
+            comprobante_iv: t.comprobante_iv,
+            comprobante_salt: t.comprobante_salt,
+            comprobante_mime: t.comprobante_mime,
+          },
+        })
+      }
+    }
+
+    for (const c of convenioPagos.filter((c) => c.mes === mes && c.anio === anio)) {
+      rows.push({
+        concepto: 'Pago de convenio',
+        folio: c.folio_comprobante,
+        monto: c.monto,
+        comprobante: c,
+      })
+    }
+
+    for (const n of nominaMensual.filter((n) => n.mes === mes && n.anio === anio)) {
+      rows.push({
+        concepto: `Nómina — ${nombrePorId[n.trabajador_id] ?? '—'}`,
+        folio: n.folio_comprobante,
+        monto: n.monto,
+        comprobante: n,
+      })
+    }
+
+    for (const g of gastosOperativos.filter((g) => g.mes === mes && g.anio === anio)) {
+      rows.push({
+        concepto: `Gasto — ${CATEGORIA_GASTO_LABEL[g.categoria]}`,
+        folio: g.folio_comprobante,
+        monto: g.monto,
+        comprobante: g,
+      })
+    }
+
+    return rows
+  }, [mes, anio, pagosAlcaldia, alcaldiaTickets, convenioPagos, nominaMensual, gastosOperativos, nombrePorId])
 
   const handleExportarExcel = () => {
     const nominaFilas = nominaMensual
@@ -137,6 +218,43 @@ export default function ReporteTab({
             <Printer size={13} /> Exportar PDF (imprimir)
           </button>
         </div>
+      </div>
+
+      <div className="bg-surface border border-border rounded-xl p-4 print:hidden">
+        <div className="flex items-center gap-2 mb-3">
+          <FileCheck2 size={15} className="text-accent" />
+          <h4 className="text-sm font-semibold text-white">
+            CFDI y comprobantes del periodo — {mes} {anio}
+          </h4>
+        </div>
+        {comprobantes.length === 0 ? (
+          <p className="text-xs text-gray-500">Sin conceptos registrados para este periodo.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs min-w-[500px]">
+              <thead>
+                <tr className="text-left text-gray-500 border-b border-border">
+                  <th className="px-2 py-1.5 font-normal">Concepto</th>
+                  <th className="px-2 py-1.5 font-normal">Folio</th>
+                  <th className="px-2 py-1.5 font-normal">Monto</th>
+                  <th className="px-2 py-1.5 font-normal">Comprobante</th>
+                </tr>
+              </thead>
+              <tbody>
+                {comprobantes.map((c, i) => (
+                  <tr key={i} className="border-b border-border/50">
+                    <td className="px-2 py-1.5 text-white">{c.concepto}</td>
+                    <td className="px-2 py-1.5 text-gray-300">{c.folio || 'Sin folio'}</td>
+                    <td className="px-2 py-1.5 text-gray-300">${c.monto.toFixed(2)}</td>
+                    <td className="px-2 py-1.5">
+                      <VerComprobante comprobante={c.comprobante} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       <div className="bg-surface border border-border rounded-xl p-4">
