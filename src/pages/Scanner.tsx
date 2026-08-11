@@ -88,26 +88,27 @@ export default function Scanner() {
     const registroId = await readQrToken(token)
     if (!registroId) throw new Error('El QR no es válido o no se pudo descifrar')
 
-    const { data: registro, error: fetchErr } = await supabase
-      .from('registros_view')
-      .select('*')
-      .eq('id', registroId)
+    // Usa RPCs dedicadas (en vez de registros_view/registros) porque el
+    // check-in en la puerta debe funcionar para cualquier rol sin importar
+    // la forma de pago del socio; el ocultamiento de "efectivo" es solo
+    // para listados/reportes financieros, no para dar acceso.
+    const { data: registroData, error: fetchErr } = await supabase
+      .rpc('scanner_get_registro', { p_id: registroId })
       .single()
+    const registro = registroData as Registro | null
     if (fetchErr || !registro) throw new Error('El registro del QR ya no existe')
 
     const { mes, anio } = currentMonthYear()
-    const { count } = await supabase
-      .from('registros')
-      .select('id', { count: 'exact', head: true })
-      .ilike('nombre', registro.nombre)
-      .eq('mes', mes)
-      .eq('anio', anio)
-      .gt('monto', 0)
+    const { data: pagoMesActualData } = await supabase.rpc('scanner_pago_mes_actual', {
+      p_nombre: registro.nombre,
+      p_mes: mes,
+      p_anio: anio,
+    })
 
     setScanResult({
       registro,
       faltanDocumentos: registro.estatus === 'faltan_doc',
-      pagoMesActual: (count ?? 0) > 0,
+      pagoMesActual: (pagoMesActualData as boolean | null) ?? false,
     })
   }
 
