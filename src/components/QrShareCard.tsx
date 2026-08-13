@@ -42,11 +42,13 @@ export default function QrShareCard({
 
   const handleEnvioAutomatico = async () => {
     if (!telefono) return
+    console.log(`[whatsapp:click] ${new Date().toISOString()} clic en "Enviar QR por WhatsApp" (${nombre}, ${telefono})`)
     setError(null)
     setEstado('validando')
     try {
       const { registered } = await checkWhatsAppNumber(telefono)
       if (!registered) {
+        console.log(`[whatsapp:click] ${new Date().toISOString()} número sin WhatsApp registrado`)
         setError(WHATSAPP_ERROR_LABEL.numero_sin_whatsapp)
         setEstado('error')
         return
@@ -57,9 +59,11 @@ export default function QrShareCard({
         imagenBase64: dataUrl,
         caption: `Hola ${nombre}, aquí está tu código QR de acceso al gimnasio.`,
       })
+      console.log(`[whatsapp:click] ${new Date().toISOString()} envío completado`)
       setEstado('enviado')
     } catch (err) {
       const key = err instanceof Error ? err.message : 'send_failed'
+      console.log(`[whatsapp:click] ${new Date().toISOString()} error:`, key)
       setError(WHATSAPP_ERROR_LABEL[key] ?? WHATSAPP_ERROR_LABEL.send_failed)
       setEstado('error')
     }

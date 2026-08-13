@@ -193,57 +193,80 @@ async function resolverJid(telefono) {
 }
 
 app.get('/check/:telefono', async (req, res) => {
+  console.log(`[whatsapp] ${new Date().toISOString()} GET /check/${req.params.telefono}`)
   if (!isEnabled()) return res.status(503).json({ error: 'whatsapp_deshabilitado' })
   // Si justo cayó la conexión, se espera a que la reconexión automática
   // (con la sesión ya guardada) la restablezca, en vez de fallar al toque.
   if (!connected()) await esperarConexion()
-  if (!connected()) return res.status(503).json({ error: 'whatsapp_no_conectado' })
+  if (!connected()) {
+    console.log(`[whatsapp] ${new Date().toISOString()} /check: sin conexión`)
+    return res.status(503).json({ error: 'whatsapp_no_conectado' })
+  }
   try {
     const jid = await resolverJid(req.params.telefono)
+    console.log(`[whatsapp] ${new Date().toISOString()} /check resultado: jid=${jid ?? 'ninguno'}`)
     res.json({ registered: Boolean(jid), jid: jid ?? null })
   } catch (err) {
+    console.log(`[whatsapp] ${new Date().toISOString()} /check error:`, err?.message || err)
     res.status(500).json({ error: 'check_failed', detail: String(err?.message || err) })
   }
 })
 
 async function enviarAJid(jid, buffer, textoCaption) {
+  console.log(`[whatsapp] ${new Date().toISOString()} enviarAJid: iniciando envío a ${jid}`)
+
   // Con un número al que nunca se le ha escrito, la sesión de cifrado
   // (Signal) todavía no existe; suscribirse a su presencia fuerza a
   // WhatsApp a intercambiarla antes de mandar la imagen, evitando que el
   // primer envío "en frío" falle o se quede sin efecto.
   try {
+    console.log(`[whatsapp] ${new Date().toISOString()} enviarAJid: presenceSubscribe(${jid})`)
     await sock.presenceSubscribe(jid)
     await new Promise((resolve) => setTimeout(resolve, 300))
-  } catch {
-    // No es crítico: si falla, igual se intenta el envío.
+    console.log(`[whatsapp] ${new Date().toISOString()} enviarAJid: presenceSubscribe ok`)
+  } catch (err) {
+    console.log(`[whatsapp] ${new Date().toISOString()} enviarAJid: presenceSubscribe falló (no crítico):`, err?.message || err)
   }
 
   try {
-    await sock.sendMessage(jid, { image: buffer, caption: textoCaption })
-  } catch {
+    console.log(`[whatsapp] ${new Date().toISOString()} enviarAJid: sendMessage(imagen) a ${jid}`)
+    const resultado = await sock.sendMessage(jid, { image: buffer, caption: textoCaption })
+    console.log(`[whatsapp] ${new Date().toISOString()} enviarAJid: imagen enviada, id=${resultado?.key?.id ?? 'desconocido'}`)
+  } catch (err) {
+    console.log(`[whatsapp] ${new Date().toISOString()} enviarAJid: falló envío de imagen directa:`, err?.message || err)
     // Reintento para primer contacto: un texto suele terminar de
     // establecer la sesión donde la imagen sola falló; si el texto
     // funciona, se manda la imagen después.
-    await sock.sendMessage(jid, { text: textoCaption })
-    await sock.sendMessage(jid, { image: buffer })
+    console.log(`[whatsapp] ${new Date().toISOString()} enviarAJid: reintentando con texto primero`)
+    const resultadoTexto = await sock.sendMessage(jid, { text: textoCaption })
+    console.log(`[whatsapp] ${new Date().toISOString()} enviarAJid: texto enviado, id=${resultadoTexto?.key?.id ?? 'desconocido'}`)
+    const resultadoImagen = await sock.sendMessage(jid, { image: buffer })
+    console.log(`[whatsapp] ${new Date().toISOString()} enviarAJid: imagen enviada tras texto, id=${resultadoImagen?.key?.id ?? 'desconocido'}`)
   }
 }
 
 app.post('/send-qr', async (req, res) => {
+  console.log(`[whatsapp] ${new Date().toISOString()} POST /send-qr recibido`)
   if (!isEnabled()) return res.status(503).json({ error: 'whatsapp_deshabilitado' })
   // Igual que en /check: se le da margen a la reconexión automática con la
   // sesión ya guardada antes de reportar que no hay WhatsApp conectado.
   if (!connected() || !sock) await esperarConexion()
-  if (!connected() || !sock) return res.status(503).json({ error: 'whatsapp_no_conectado' })
+  if (!connected() || !sock) {
+    console.log(`[whatsapp] ${new Date().toISOString()} /send-qr: sin conexión`)
+    return res.status(503).json({ error: 'whatsapp_no_conectado' })
+  }
   const { telefono, imagenBase64, caption } = req.body || {}
   if (!telefono || !imagenBase64) {
+    console.log(`[whatsapp] ${new Date().toISOString()} /send-qr: faltan parámetros`)
     return res.status(400).json({ error: 'faltan_parametros' })
   }
   try {
     // candidatosMexico ya devuelve primero el formato "52" y después "521";
     // se intenta enviar con cada uno en ese orden hasta que uno funcione.
     const candidatos = candidatosMexico(telefono)
+    console.log(`[whatsapp] ${new Date().toISOString()} /send-qr: candidatos para ${telefono} →`, candidatos)
     if (candidatos.length === 0) {
+      console.log(`[whatsapp] ${new Date().toISOString()} /send-qr: teléfono inválido`)
       return res.status(400).json({ error: 'telefono_invalido' })
     }
 
@@ -253,18 +276,22 @@ app.post('/send-qr', async (req, res) => {
 
     let ultimoError = null
     for (const candidato of candidatos) {
-      const jid = `${candidato}@s.whatsapp.net`
+      const jid = `${candidato}@c.us`
+      console.log(`[whatsapp] ${new Date().toISOString()} /send-qr: intentando candidato ${jid}`)
       try {
         await enviarAJid(jid, buffer, textoCaption)
+        console.log(`[whatsapp] ${new Date().toISOString()} /send-qr: envío exitoso a ${jid}`)
         return res.json({ success: true, jid })
       } catch (err) {
         ultimoError = err
-        console.error(`[whatsapp] Falló el envío a ${jid}, probando siguiente candidato:`, err?.message || err)
+        console.error(`[whatsapp] ${new Date().toISOString()} Falló el envío a ${jid}, probando siguiente candidato:`, err?.message || err)
       }
     }
 
+    console.log(`[whatsapp] ${new Date().toISOString()} /send-qr: todos los candidatos fallaron`)
     res.status(500).json({ error: 'send_failed', detail: String(ultimoError?.message || ultimoError) })
   } catch (err) {
+    console.log(`[whatsapp] ${new Date().toISOString()} /send-qr: error inesperado:`, err?.message || err)
     res.status(500).json({ error: 'send_failed', detail: String(err?.message || err) })
   }
 })
