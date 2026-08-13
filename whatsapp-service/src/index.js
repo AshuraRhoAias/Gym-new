@@ -128,10 +128,28 @@ app.post('/send-qr', async (req, res) => {
     }
     const base64 = imagenBase64.includes(',') ? imagenBase64.split(',')[1] : imagenBase64
     const buffer = Buffer.from(base64, 'base64')
-    await sock.sendMessage(jid, {
-      image: buffer,
-      caption: caption || 'Aquí está tu código QR de acceso al gimnasio.',
-    })
+    const textoCaption = caption || 'Aquí está tu código QR de acceso al gimnasio.'
+
+    // Con un número al que nunca se le ha escrito, la sesión de cifrado
+    // (Signal) todavía no existe; suscribirse a su presencia fuerza a
+    // WhatsApp a intercambiarla antes de mandar la imagen, evitando que el
+    // primer envío "en frío" falle o se quede sin efecto.
+    try {
+      await sock.presenceSubscribe(jid)
+      await new Promise((resolve) => setTimeout(resolve, 300))
+    } catch {
+      // No es crítico: si falla, igual se intenta el envío.
+    }
+
+    try {
+      await sock.sendMessage(jid, { image: buffer, caption: textoCaption })
+    } catch {
+      // Reintento para primer contacto: un texto suele terminar de
+      // establecer la sesión donde la imagen sola falló; si el texto
+      // funciona, se manda la imagen después.
+      await sock.sendMessage(jid, { text: textoCaption })
+      await sock.sendMessage(jid, { image: buffer })
+    }
     res.json({ success: true, jid })
   } catch (err) {
     res.status(500).json({ error: 'send_failed', detail: String(err?.message || err) })
