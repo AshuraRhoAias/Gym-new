@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { MessageCircle, Send, Loader2, CheckCircle2, Search } from 'lucide-react'
+import { MessageCircle, Send, Loader2, CheckCircle2, Search, Download } from 'lucide-react'
 import { usePeriod } from '../context/PeriodContext'
 import { usePrivacy } from '../context/PrivacyContext'
 import { usePeriodRegistros } from '../hooks/usePeriodRegistros'
@@ -14,6 +14,16 @@ const MENSAJE_DEFAULT = 'Hola {nombre}, aquí está tu código QR de acceso al g
 
 type EnvioEstado = 'idle' | 'validando' | 'enviando' | 'enviado' | 'error'
 
+function waLink(telefono: string | undefined): string | null {
+  if (!telefono) return null
+  const digits = telefono.replace(/[^\d]/g, '')
+  if (digits.length < 8) return null
+  const text = encodeURIComponent(
+    'Hola, aquí está tu código QR de acceso al gimnasio. Adjunta la imagen descargada a este chat para guardarla.',
+  )
+  return `https://wa.me/${digits}?text=${text}`
+}
+
 export default function Whats() {
   const { mes, anio } = usePeriod()
   const { hideSinFolio } = usePrivacy()
@@ -23,6 +33,8 @@ export default function Whats() {
   const [mensaje, setMensaje] = useState(MENSAJE_DEFAULT)
   const [search, setSearch] = useState('')
   const [envios, setEnvios] = useState<Record<string, { estado: EnvioEstado; error?: string }>>({})
+  const [qrCache, setQrCache] = useState<Record<string, string>>({})
+  const [descargando, setDescargando] = useState<Record<string, boolean>>({})
 
   useEffect(() => {
     let active = true
@@ -57,6 +69,27 @@ export default function Whats() {
 
   const setEnvioEstado = (id: string, estado: EnvioEstado, error?: string) =>
     setEnvios((prev) => ({ ...prev, [id]: { estado, error } }))
+
+  const getQrDataUrl = async (registroId: string) => {
+    if (qrCache[registroId]) return qrCache[registroId]
+    const token = await buildQrToken(registroId)
+    const dataUrl = await buildQrFlyerDataUrl(token)
+    setQrCache((prev) => ({ ...prev, [registroId]: dataUrl }))
+    return dataUrl
+  }
+
+  const handleDescargarQr = async (registroId: string, nombre: string) => {
+    setDescargando((prev) => ({ ...prev, [registroId]: true }))
+    try {
+      const dataUrl = await getQrDataUrl(registroId)
+      const a = document.createElement('a')
+      a.href = dataUrl
+      a.download = `qr-${nombre.replace(/\s+/g, '-').toLowerCase()}.png`
+      a.click()
+    } finally {
+      setDescargando((prev) => ({ ...prev, [registroId]: false }))
+    }
+  }
 
   const handleEnviar = async (registroId: string, nombre: string) => {
     const telefono = telefonos[registroId]
@@ -175,29 +208,62 @@ export default function Whats() {
                       </td>
                       <td className="px-4 py-2 text-right">
                         <div className="flex flex-col items-end gap-1">
-                          <button
-                            type="button"
-                            onClick={() => handleEnviar(r.id, r.nombre)}
-                            disabled={
-                              !telefono ||
-                              envio.estado === 'validando' ||
-                              envio.estado === 'enviando' ||
-                              envio.estado === 'enviado'
-                            }
-                            className="flex items-center gap-1.5 bg-accent hover:bg-accent-dark text-black rounded-lg px-3 py-1.5 text-xs font-medium disabled:opacity-60"
-                          >
-                            {envio.estado === 'validando' || envio.estado === 'enviando' ? (
-                              <Loader2 size={13} className="animate-spin" />
-                            ) : envio.estado === 'enviado' ? (
-                              <CheckCircle2 size={13} />
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => handleDescargarQr(r.id, r.nombre)}
+                              disabled={descargando[r.id]}
+                              title="Descargar QR"
+                              className="flex items-center gap-1.5 bg-surface-2 border border-border hover:border-accent/50 text-gray-200 rounded-lg px-2.5 py-1.5 text-xs font-medium disabled:opacity-60"
+                            >
+                              {descargando[r.id] ? (
+                                <Loader2 size={13} className="animate-spin" />
+                              ) : (
+                                <Download size={13} />
+                              )}
+                            </button>
+                            {waLink(telefono) ? (
+                              <a
+                                href={waLink(telefono)!}
+                                target="_blank"
+                                rel="noreferrer"
+                                title="Abrir chat de WhatsApp"
+                                className="flex items-center gap-1.5 bg-surface-2 border border-border hover:border-accent/50 text-gray-200 rounded-lg px-2.5 py-1.5 text-xs font-medium"
+                              >
+                                <MessageCircle size={13} />
+                              </a>
                             ) : (
-                              <Send size={13} />
+                              <span
+                                title="Sin teléfono válido para WhatsApp"
+                                className="flex items-center gap-1.5 bg-surface-2 border border-border text-gray-600 rounded-lg px-2.5 py-1.5 text-xs font-medium opacity-50 cursor-not-allowed"
+                              >
+                                <MessageCircle size={13} />
+                              </span>
                             )}
-                            {envio.estado === 'validando' && 'Validando…'}
-                            {envio.estado === 'enviando' && 'Enviando…'}
-                            {envio.estado === 'enviado' && 'Enviado'}
-                            {(envio.estado === 'idle' || envio.estado === 'error') && 'Enviar QR'}
-                          </button>
+                            <button
+                              type="button"
+                              onClick={() => handleEnviar(r.id, r.nombre)}
+                              disabled={
+                                !telefono ||
+                                envio.estado === 'validando' ||
+                                envio.estado === 'enviando' ||
+                                envio.estado === 'enviado'
+                              }
+                              className="flex items-center gap-1.5 bg-accent hover:bg-accent-dark text-black rounded-lg px-3 py-1.5 text-xs font-medium disabled:opacity-60"
+                            >
+                              {envio.estado === 'validando' || envio.estado === 'enviando' ? (
+                                <Loader2 size={13} className="animate-spin" />
+                              ) : envio.estado === 'enviado' ? (
+                                <CheckCircle2 size={13} />
+                              ) : (
+                                <Send size={13} />
+                              )}
+                              {envio.estado === 'validando' && 'Validando…'}
+                              {envio.estado === 'enviando' && 'Enviando…'}
+                              {envio.estado === 'enviado' && 'Enviado'}
+                              {(envio.estado === 'idle' || envio.estado === 'error') && 'Enviar QR'}
+                            </button>
+                          </div>
                           {envio.estado === 'error' && envio.error && (
                             <span className="text-xs text-danger max-w-[180px] text-right">{envio.error}</span>
                           )}
