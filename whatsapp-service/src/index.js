@@ -115,6 +115,29 @@ app.get('/check/:telefono', async (req, res) => {
   }
 })
 
+async function enviarAJid(jid, buffer, textoCaption) {
+  // Con un número al que nunca se le ha escrito, la sesión de cifrado
+  // (Signal) todavía no existe; suscribirse a su presencia fuerza a
+  // WhatsApp a intercambiarla antes de mandar la imagen, evitando que el
+  // primer envío "en frío" falle o se quede sin efecto.
+  try {
+    await sock.presenceSubscribe(jid)
+    await new Promise((resolve) => setTimeout(resolve, 300))
+  } catch {
+    // No es crítico: si falla, igual se intenta el envío.
+  }
+
+  try {
+    await sock.sendMessage(jid, { image: buffer, caption: textoCaption })
+  } catch {
+    // Reintento para primer contacto: un texto suele terminar de
+    // establecer la sesión donde la imagen sola falló; si el texto
+    // funciona, se manda la imagen después.
+    await sock.sendMessage(jid, { text: textoCaption })
+    await sock.sendMessage(jid, { image: buffer })
+  }
+}
+
 app.post('/send-qr', async (req, res) => {
   if (!connected || !sock) return res.status(503).json({ error: 'whatsapp_no_conectado' })
   const { telefono, imagenBase64, caption } = req.body || {}
@@ -122,35 +145,30 @@ app.post('/send-qr', async (req, res) => {
     return res.status(400).json({ error: 'faltan_parametros' })
   }
   try {
-    const jid = await resolverJid(telefono)
-    if (!jid) {
-      return res.status(404).json({ error: 'numero_sin_whatsapp' })
+    // candidatosMexico ya devuelve primero el formato "52" y después "521";
+    // se intenta enviar con cada uno en ese orden hasta que uno funcione.
+    const candidatos = candidatosMexico(telefono)
+    if (candidatos.length === 0) {
+      return res.status(400).json({ error: 'telefono_invalido' })
     }
+
     const base64 = imagenBase64.includes(',') ? imagenBase64.split(',')[1] : imagenBase64
     const buffer = Buffer.from(base64, 'base64')
     const textoCaption = caption || 'Aquí está tu código QR de acceso al gimnasio.'
 
-    // Con un número al que nunca se le ha escrito, la sesión de cifrado
-    // (Signal) todavía no existe; suscribirse a su presencia fuerza a
-    // WhatsApp a intercambiarla antes de mandar la imagen, evitando que el
-    // primer envío "en frío" falle o se quede sin efecto.
-    try {
-      await sock.presenceSubscribe(jid)
-      await new Promise((resolve) => setTimeout(resolve, 300))
-    } catch {
-      // No es crítico: si falla, igual se intenta el envío.
+    let ultimoError = null
+    for (const candidato of candidatos) {
+      const jid = `${candidato}@s.whatsapp.net`
+      try {
+        await enviarAJid(jid, buffer, textoCaption)
+        return res.json({ success: true, jid })
+      } catch (err) {
+        ultimoError = err
+        console.error(`[whatsapp] Falló el envío a ${jid}, probando siguiente candidato:`, err?.message || err)
+      }
     }
 
-    try {
-      await sock.sendMessage(jid, { image: buffer, caption: textoCaption })
-    } catch {
-      // Reintento para primer contacto: un texto suele terminar de
-      // establecer la sesión donde la imagen sola falló; si el texto
-      // funciona, se manda la imagen después.
-      await sock.sendMessage(jid, { text: textoCaption })
-      await sock.sendMessage(jid, { image: buffer })
-    }
-    res.json({ success: true, jid })
+    res.status(500).json({ error: 'send_failed', detail: String(ultimoError?.message || ultimoError) })
   } catch (err) {
     res.status(500).json({ error: 'send_failed', detail: String(err?.message || err) })
   }
