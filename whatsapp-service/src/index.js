@@ -36,6 +36,38 @@ let currentQrDataUrl = null
 let connected = false
 let connecting = false
 
+/**
+ * Espera hasta `timeoutMs` a que la conexión (ya en curso, con las
+ * credenciales guardadas) quede lista, en vez de fallar de inmediato ante
+ * una desconexión momentánea. No dispara una sesión nueva ni un QR: solo
+ * observa el resultado de la reconexión automática que ya está en marcha.
+ */
+function esperarConexion(timeoutMs = 15000) {
+  if (connected) return Promise.resolve(true)
+  return new Promise((resolve) => {
+    const intervalo = setInterval(() => {
+      if (connected) {
+        clearInterval(intervalo)
+        clearTimeout(limite)
+        resolve(true)
+      }
+    }, 300)
+    const limite = setTimeout(() => {
+      clearInterval(intervalo)
+      resolve(connected)
+    }, timeoutMs)
+  })
+}
+
+// Mantiene el socket "despierto": WhatsApp puede cerrar conexiones ociosas
+// sin tráfico. Un ping de presencia periódico evita ese cierre silencioso y
+// hace innecesario volver a escanear el QR mientras el proceso siga vivo.
+setInterval(() => {
+  if (connected && sock) {
+    sock.sendPresenceUpdate('available').catch(() => {})
+  }
+}, 60_000)
+
 async function iniciarSesion() {
   if (connecting) return
   connecting = true
@@ -76,9 +108,12 @@ async function iniciarSesion() {
 
       console.log(`[whatsapp] Conexión cerrada (código ${statusCode ?? 'desconocido'}). Reintentando…`)
 
-      // Nunca se detiene: si fue logout real, se limpia la sesión para pedir un QR
-      // nuevo; en cualquier otro caso (red, reinicio de WhatsApp, etc.) se
-      // reconecta con las mismas credenciales guardadas.
+      // El servicio nunca se detiene: ante cualquier caída que no sea un
+      // logout real (red, reinicio de WhatsApp, timeouts, etc.) se reconecta
+      // con las mismas credenciales guardadas, sin pedir un QR nuevo. Solo
+      // un logout real desde el teléfono (la sesión queda revocada del lado
+      // de WhatsApp, no hay forma de reutilizarla) obliga a limpiar y
+      // esperar un nuevo escaneo.
       if (loggedOut) {
         const fs = await import('node:fs/promises')
         await fs.rm(AUTH_DIR, { recursive: true, force: true }).catch(() => {})
@@ -106,6 +141,9 @@ async function resolverJid(telefono) {
 }
 
 app.get('/check/:telefono', async (req, res) => {
+  // Si justo cayó la conexión, se espera a que la reconexión automática
+  // (con la sesión ya guardada) la restablezca, en vez de fallar al toque.
+  if (!connected) await esperarConexion()
   if (!connected) return res.status(503).json({ error: 'whatsapp_no_conectado' })
   try {
     const jid = await resolverJid(req.params.telefono)
@@ -139,6 +177,9 @@ async function enviarAJid(jid, buffer, textoCaption) {
 }
 
 app.post('/send-qr', async (req, res) => {
+  // Igual que en /check: se le da margen a la reconexión automática con la
+  // sesión ya guardada antes de reportar que no hay WhatsApp conectado.
+  if (!connected || !sock) await esperarConexion()
   if (!connected || !sock) return res.status(503).json({ error: 'whatsapp_no_conectado' })
   const { telefono, imagenBase64, caption } = req.body || {}
   if (!telefono || !imagenBase64) {
