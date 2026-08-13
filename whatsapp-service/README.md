@@ -86,13 +86,33 @@ QR actualizado cuando este servicio reporta `connected: false` en
 ## Variables de entorno
 
 - `WHATSAPP_SERVICE_PORT` (opcional, default `3900`).
+- `WHATSAPP_SERVICE_ENABLED` (opcional, default habilitado). Ponla en
+  `false` para que el proceso levante el servidor HTTP pero nunca intente
+  vincular ni mantener una sesión de Baileys (útil en instalaciones donde
+  no se usa el envío de QR por WhatsApp). Con el servicio deshabilitado,
+  `/check` y `/send-qr` responden `503 { error: "whatsapp_deshabilitado" }`.
 
 En el proyecto principal, `VITE_WHATSAPP_SERVICE_URL` apunta a este
 servicio (default `http://localhost:3900`).
 
+## Máquina de estados
+
+El servicio expone su estado interno en `GET /status` (campo `state`):
+
+- `DISABLED` — `WHATSAPP_SERVICE_ENABLED=false`, no hay socket activo.
+- `UNINITIALIZED` — aún no arrancó ningún intento de sesión.
+- `INITIALIZING` — creando el socket de Baileys / cargando credenciales.
+- `QR_PENDING` — hay un QR vigente esperando ser escaneado.
+- `READY` — sesión vinculada y activa, lista para enviar.
+- `DISCONNECTED` — se cayó la conexión; reconectando con las credenciales
+  guardadas (no requiere un QR nuevo salvo logout real desde el teléfono).
+- `ERROR` — falló la inicialización del socket (no la conexión ya
+  establecida); reintenta con backoff hasta `MAX_INIT_RETRIES` intentos.
+
 ## Endpoints
 
-- `GET /status` → `{ connected, qr }` (`qr` es un data URL o `null`).
+- `GET /status` → `{ connected, qr, state, enabled }` (`qr` es un data URL
+  o `null`; `state` es uno de los valores de arriba).
 - `GET /check/:telefono` → `{ registered, jid }`.
 - `POST /send-qr` con `{ telefono, imagenBase64, caption }` → valida el
   número y envía la imagen del QR.

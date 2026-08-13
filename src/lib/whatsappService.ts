@@ -3,6 +3,8 @@ const BASE_URL = import.meta.env.VITE_WHATSAPP_SERVICE_URL || 'http://localhost:
 export interface WhatsAppStatus {
   connected: boolean
   qr: string | null
+  state?: string
+  enabled?: boolean
 }
 
 /** Ping corto: si el servicio no responde (no está corriendo), se trata como desconectado. */
@@ -20,7 +22,8 @@ export async function checkWhatsAppNumber(telefono: string): Promise<{ registere
   const res = await fetch(`${BASE_URL}/check/${encodeURIComponent(telefono)}`, { signal: AbortSignal.timeout(8000) })
   if (!res.ok) {
     const body = await res.json().catch(() => ({}))
-    throw new Error(body.error === 'whatsapp_no_conectado' ? 'whatsapp_no_conectado' : 'check_failed')
+    const conocidos = ['whatsapp_no_conectado', 'whatsapp_deshabilitado']
+    throw new Error(conocidos.includes(body.error) ? body.error : 'check_failed')
   }
   return res.json()
 }
@@ -52,4 +55,5 @@ export const WHATSAPP_ERROR_LABEL: Record<string, string> = {
   send_failed: 'No se pudo enviar el QR por WhatsApp. Intenta de nuevo.',
   faltan_parametros: 'Faltan datos para enviar el QR.',
   telefono_invalido: 'El número de teléfono no es válido.',
+  whatsapp_deshabilitado: 'El envío por WhatsApp está deshabilitado en este servicio.',
 }

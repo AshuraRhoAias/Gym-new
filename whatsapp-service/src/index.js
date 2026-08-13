@@ -31,10 +31,34 @@ const PORT = process.env.WHATSAPP_SERVICE_PORT || 3900
 const AUTH_DIR = fileURLToPath(new URL('../auth', import.meta.url))
 const logger = pino({ level: 'warn' })
 
+// Máquina de estados explícita del servicio. `connected`/`currentQrDataUrl`
+// se derivan de `currentState`, pero se exponen aparte para no romper el
+// contrato ya establecido de GET /status ({ connected, qr }).
+const STATES = {
+  DISABLED: 'DISABLED',
+  UNINITIALIZED: 'UNINITIALIZED',
+  INITIALIZING: 'INITIALIZING',
+  QR_PENDING: 'QR_PENDING',
+  READY: 'READY',
+  DISCONNECTED: 'DISCONNECTED',
+  ERROR: 'ERROR',
+}
+
 let sock = null
 let currentQrDataUrl = null
-let connected = false
-let connecting = false
+let currentState = STATES.UNINITIALIZED
+let initializing = false
+let initRetries = 0
+const MAX_INIT_RETRIES = 5
+
+const connected = () => currentState === STATES.READY
+
+// Apaga por completo el servicio (no intenta vincular ni levantar el
+// socket de Baileys) poniendo WHATSAPP_SERVICE_ENABLED=false. Por defecto
+// está habilitado, igual que VITE_ENABLE_WHATSAPP en el frontend.
+function isEnabled() {
+  return process.env.WHATSAPP_SERVICE_ENABLED !== 'false'
+}
 
 /**
  * Espera hasta `timeoutMs` a que la conexión (ya en curso, con las
@@ -43,10 +67,10 @@ let connecting = false
  * observa el resultado de la reconexión automática que ya está en marcha.
  */
 function esperarConexion(timeoutMs = 15000) {
-  if (connected) return Promise.resolve(true)
+  if (connected()) return Promise.resolve(true)
   return new Promise((resolve) => {
     const intervalo = setInterval(() => {
-      if (connected) {
+      if (connected()) {
         clearInterval(intervalo)
         clearTimeout(limite)
         resolve(true)
@@ -54,7 +78,7 @@ function esperarConexion(timeoutMs = 15000) {
     }, 300)
     const limite = setTimeout(() => {
       clearInterval(intervalo)
-      resolve(connected)
+      resolve(connected())
     }, timeoutMs)
   })
 }
@@ -63,64 +87,87 @@ function esperarConexion(timeoutMs = 15000) {
 // sin tráfico. Un ping de presencia periódico evita ese cierre silencioso y
 // hace innecesario volver a escanear el QR mientras el proceso siga vivo.
 setInterval(() => {
-  if (connected && sock) {
+  if (connected() && sock) {
     sock.sendPresenceUpdate('available').catch(() => {})
   }
 }, 60_000)
 
 async function iniciarSesion() {
-  if (connecting) return
-  connecting = true
-  const { state, saveCreds } = await useMultiFileAuthState(AUTH_DIR)
-  const { version } = await fetchLatestBaileysVersion()
+  if (!isEnabled()) {
+    console.log('[whatsapp] Servicio DESHABILITADO (WHATSAPP_SERVICE_ENABLED=false).')
+    currentState = STATES.DISABLED
+    return
+  }
+  if (initializing) return
+  initializing = true
+  currentState = STATES.INITIALIZING
 
-  sock = makeWASocket({
-    version,
-    auth: state,
-    logger,
-    browser: ['Deportivo Morelos', 'Chrome', '1.0'],
-  })
+  try {
+    const { state, saveCreds } = await useMultiFileAuthState(AUTH_DIR)
+    const { version } = await fetchLatestBaileysVersion()
 
-  sock.ev.on('creds.update', saveCreds)
+    sock = makeWASocket({
+      version,
+      auth: state,
+      logger,
+      browser: ['Deportivo Morelos', 'Chrome', '1.0'],
+    })
 
-  sock.ev.on('connection.update', async (update) => {
-    const { connection, lastDisconnect, qr } = update
+    sock.ev.on('creds.update', saveCreds)
 
-    if (qr) {
-      currentQrDataUrl = await QRCode.toDataURL(qr, { margin: 1, width: 280 })
-      console.log('\n=== Escanea este código QR desde WhatsApp (Dispositivos vinculados) ===\n')
-      qrcodeTerminal.generate(qr, { small: true })
-      console.log('\nSi cambia, se vuelve a generar automáticamente hasta vincular.\n')
-    }
+    sock.ev.on('connection.update', async (update) => {
+      const { connection, lastDisconnect, qr } = update
 
-    if (connection === 'open') {
-      connected = true
-      currentQrDataUrl = null
-      connecting = false
-      console.log('[whatsapp] Sesión vinculada y activa.')
-    }
-
-    if (connection === 'close') {
-      connected = false
-      connecting = false
-      const statusCode = lastDisconnect?.error?.output?.statusCode
-      const loggedOut = statusCode === DisconnectReason.loggedOut
-
-      console.log(`[whatsapp] Conexión cerrada (código ${statusCode ?? 'desconocido'}). Reintentando…`)
-
-      // El servicio nunca se detiene: ante cualquier caída que no sea un
-      // logout real (red, reinicio de WhatsApp, timeouts, etc.) se reconecta
-      // con las mismas credenciales guardadas, sin pedir un QR nuevo. Solo
-      // un logout real desde el teléfono (la sesión queda revocada del lado
-      // de WhatsApp, no hay forma de reutilizarla) obliga a limpiar y
-      // esperar un nuevo escaneo.
-      if (loggedOut) {
-        const fs = await import('node:fs/promises')
-        await fs.rm(AUTH_DIR, { recursive: true, force: true }).catch(() => {})
+      if (qr) {
+        currentState = STATES.QR_PENDING
+        currentQrDataUrl = await QRCode.toDataURL(qr, { margin: 1, width: 280 })
+        console.log('\n=== Escanea este código QR desde WhatsApp (Dispositivos vinculados) ===\n')
+        qrcodeTerminal.generate(qr, { small: true })
+        console.log('\nSi cambia, se vuelve a generar automáticamente hasta vincular.\n')
       }
-      setTimeout(iniciarSesion, 2000)
+
+      if (connection === 'open') {
+        currentState = STATES.READY
+        currentQrDataUrl = null
+        initializing = false
+        initRetries = 0
+        console.log('[whatsapp] Sesión vinculada y activa.')
+      }
+
+      if (connection === 'close') {
+        currentState = STATES.DISCONNECTED
+        initializing = false
+        const statusCode = lastDisconnect?.error?.output?.statusCode
+        const loggedOut = statusCode === DisconnectReason.loggedOut
+
+        console.log(`[whatsapp] Conexión cerrada (código ${statusCode ?? 'desconocido'}). Reintentando…`)
+
+        // El servicio nunca se detiene: ante cualquier caída que no sea un
+        // logout real (red, reinicio de WhatsApp, timeouts, etc.) se reconecta
+        // con las mismas credenciales guardadas, sin pedir un QR nuevo. Solo
+        // un logout real desde el teléfono (la sesión queda revocada del lado
+        // de WhatsApp, no hay forma de reutilizarla) obliga a limpiar y
+        // esperar un nuevo escaneo.
+        if (loggedOut) {
+          const fs = await import('node:fs/promises')
+          await fs.rm(AUTH_DIR, { recursive: true, force: true }).catch(() => {})
+        }
+        setTimeout(iniciarSesion, 2000)
+      }
+    })
+  } catch (err) {
+    console.error('[whatsapp] Error iniciando sesión:', err?.message || err)
+    currentState = STATES.ERROR
+    initializing = false
+    initRetries += 1
+
+    if (initRetries <= MAX_INIT_RETRIES) {
+      console.log(`[whatsapp] Reintentando inicialización en 5s… (intento ${initRetries}/${MAX_INIT_RETRIES})`)
+      setTimeout(iniciarSesion, 5000)
+    } else {
+      console.error('[whatsapp] Se agotaron los intentos de inicialización. Usa DELETE /session para forzar un reintento.')
     }
-  })
+  }
 }
 
 const app = express()
@@ -128,11 +175,16 @@ app.use(cors())
 app.use(express.json({ limit: '15mb' }))
 
 app.get('/status', (_req, res) => {
-  res.json({ connected, qr: connected ? null : currentQrDataUrl })
+  res.json({
+    connected: connected(),
+    qr: connected() ? null : currentQrDataUrl,
+    state: currentState,
+    enabled: isEnabled(),
+  })
 })
 
 async function resolverJid(telefono) {
-  if (!connected || !sock) return null
+  if (!connected() || !sock) return null
   const candidatos = candidatosMexico(telefono)
   if (candidatos.length === 0) return null
   const resultados = await sock.onWhatsApp(...candidatos)
@@ -141,10 +193,11 @@ async function resolverJid(telefono) {
 }
 
 app.get('/check/:telefono', async (req, res) => {
+  if (!isEnabled()) return res.status(503).json({ error: 'whatsapp_deshabilitado' })
   // Si justo cayó la conexión, se espera a que la reconexión automática
   // (con la sesión ya guardada) la restablezca, en vez de fallar al toque.
-  if (!connected) await esperarConexion()
-  if (!connected) return res.status(503).json({ error: 'whatsapp_no_conectado' })
+  if (!connected()) await esperarConexion()
+  if (!connected()) return res.status(503).json({ error: 'whatsapp_no_conectado' })
   try {
     const jid = await resolverJid(req.params.telefono)
     res.json({ registered: Boolean(jid), jid: jid ?? null })
@@ -177,10 +230,11 @@ async function enviarAJid(jid, buffer, textoCaption) {
 }
 
 app.post('/send-qr', async (req, res) => {
+  if (!isEnabled()) return res.status(503).json({ error: 'whatsapp_deshabilitado' })
   // Igual que en /check: se le da margen a la reconexión automática con la
   // sesión ya guardada antes de reportar que no hay WhatsApp conectado.
-  if (!connected || !sock) await esperarConexion()
-  if (!connected || !sock) return res.status(503).json({ error: 'whatsapp_no_conectado' })
+  if (!connected() || !sock) await esperarConexion()
+  if (!connected() || !sock) return res.status(503).json({ error: 'whatsapp_no_conectado' })
   const { telefono, imagenBase64, caption } = req.body || {}
   if (!telefono || !imagenBase64) {
     return res.status(400).json({ error: 'faltan_parametros' })
@@ -218,8 +272,9 @@ app.post('/send-qr', async (req, res) => {
 app.delete('/session', async (_req, res) => {
   const fs = await import('node:fs/promises')
   await fs.rm(AUTH_DIR, { recursive: true, force: true }).catch(() => {})
-  connected = false
+  currentState = STATES.UNINITIALIZED
   currentQrDataUrl = null
+  initRetries = 0
   try {
     sock?.end?.(undefined)
   } catch {
@@ -237,11 +292,8 @@ const server = app.listen(PORT)
 
 server.on('listening', () => {
   console.log(`[whatsapp] Servicio escuchando en http://localhost:${PORT}`)
-  iniciarSesion().catch((err) => {
-    console.error('[whatsapp] Error iniciando sesión, reintentando en 5s:', err)
-    connecting = false
-    setTimeout(iniciarSesion, 5000)
-  })
+  console.log(`[whatsapp] WHATSAPP_SERVICE_ENABLED = ${isEnabled()}`)
+  iniciarSesion()
 })
 
 server.on('error', (err) => {
