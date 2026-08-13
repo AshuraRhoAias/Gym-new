@@ -68,11 +68,14 @@ export default function Whats() {
     }
     setEnvioEstado(registroId, 'validando')
     try {
-      const { registered } = await checkWhatsAppNumber(telefono)
+      const { registered } = await checkWhatsAppNumber(telefono).catch((err) => {
+        console.log(`[whatsapp:click] ${new Date().toISOString()} checkWhatsAppNumber falló, se intenta enviar igual:`, err)
+        return { registered: false, jid: null }
+      })
       if (!registered) {
-        console.log(`[whatsapp:click] ${new Date().toISOString()} número sin WhatsApp registrado`)
-        setEnvioEstado(registroId, 'error', WHATSAPP_ERROR_LABEL.numero_sin_whatsapp)
-        return
+        // No se bloquea el envío por esto: la validación de onWhatsApp puede dar
+        // falsos negativos, así que igual se intenta mandar el QR.
+        console.log(`[whatsapp:click] ${new Date().toISOString()} número no confirmado como registrado, se intenta enviar igual`)
       }
       setEnvioEstado(registroId, 'enviando')
       const token = await buildQrToken(registroId)
