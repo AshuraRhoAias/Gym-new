@@ -34,7 +34,9 @@ export async function sendQrByWhatsApp(params: {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(params),
-    signal: AbortSignal.timeout(20000),
+    // Ahora puede reintentar con un segundo formato de número (+52 y luego
+    // +521) si el primero falla, así que se da más margen que un solo envío.
+    signal: AbortSignal.timeout(45000),
   })
   const body = await res.json().catch(() => ({}))
   if (!res.ok) {
@@ -49,4 +51,5 @@ export const WHATSAPP_ERROR_LABEL: Record<string, string> = {
   check_failed: 'No se pudo validar el número. Intenta de nuevo.',
   send_failed: 'No se pudo enviar el QR por WhatsApp. Intenta de nuevo.',
   faltan_parametros: 'Faltan datos para enviar el QR.',
+  telefono_invalido: 'El número de teléfono no es válido.',
 }
