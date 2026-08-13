@@ -19,13 +19,17 @@ export async function getWhatsAppStatus(): Promise<WhatsAppStatus> {
 }
 
 export async function checkWhatsAppNumber(telefono: string): Promise<{ registered: boolean; jid: string | null }> {
+  console.log(`[whatsapp:front] ${new Date().toISOString()} → GET /check/${telefono}`)
   const res = await fetch(`${BASE_URL}/check/${encodeURIComponent(telefono)}`, { signal: AbortSignal.timeout(8000) })
   if (!res.ok) {
     const body = await res.json().catch(() => ({}))
+    console.log(`[whatsapp:front] ${new Date().toISOString()} ← /check falló (${res.status}):`, body)
     const conocidos = ['whatsapp_no_conectado', 'whatsapp_deshabilitado']
     throw new Error(conocidos.includes(body.error) ? body.error : 'check_failed')
   }
-  return res.json()
+  const body = await res.json()
+  console.log(`[whatsapp:front] ${new Date().toISOString()} ← /check ok:`, body)
+  return body
 }
 
 export async function sendQrByWhatsApp(params: {
@@ -33,6 +37,7 @@ export async function sendQrByWhatsApp(params: {
   imagenBase64: string
   caption?: string
 }): Promise<{ success: boolean; jid: string }> {
+  console.log(`[whatsapp:front] ${new Date().toISOString()} → POST /send-qr para ${params.telefono}`)
   const res = await fetch(`${BASE_URL}/send-qr`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -43,8 +48,10 @@ export async function sendQrByWhatsApp(params: {
   })
   const body = await res.json().catch(() => ({}))
   if (!res.ok) {
+    console.log(`[whatsapp:front] ${new Date().toISOString()} ← /send-qr falló (${res.status}):`, body)
     throw new Error(body.error || 'send_failed')
   }
+  console.log(`[whatsapp:front] ${new Date().toISOString()} ← /send-qr ok:`, body)
   return body
 }
 

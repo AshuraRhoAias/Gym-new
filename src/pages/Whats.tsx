@@ -60,7 +60,9 @@ export default function Whats() {
 
   const handleEnviar = async (registroId: string, nombre: string) => {
     const telefono = telefonos[registroId]
+    console.log(`[whatsapp:click] ${new Date().toISOString()} clic en enviar (${nombre}, registro ${registroId})`)
     if (!telefono) {
+      console.log(`[whatsapp:click] ${new Date().toISOString()} sin teléfono registrado`)
       setEnvioEstado(registroId, 'error', 'Sin teléfono registrado')
       return
     }
@@ -68,6 +70,7 @@ export default function Whats() {
     try {
       const { registered } = await checkWhatsAppNumber(telefono)
       if (!registered) {
+        console.log(`[whatsapp:click] ${new Date().toISOString()} número sin WhatsApp registrado`)
         setEnvioEstado(registroId, 'error', WHATSAPP_ERROR_LABEL.numero_sin_whatsapp)
         return
       }
@@ -76,9 +79,11 @@ export default function Whats() {
       const dataUrl = await buildQrFlyerDataUrl(token)
       const caption = mensaje.replaceAll('{nombre}', nombre) || `Hola ${nombre}, aquí está tu código QR de acceso.`
       await sendQrByWhatsApp({ telefono, imagenBase64: dataUrl, caption })
+      console.log(`[whatsapp:click] ${new Date().toISOString()} envío completado (registro ${registroId})`)
       setEnvioEstado(registroId, 'enviado')
     } catch (err) {
       const key = err instanceof Error ? err.message : 'send_failed'
+      console.log(`[whatsapp:click] ${new Date().toISOString()} error (registro ${registroId}):`, key)
       setEnvioEstado(registroId, 'error', WHATSAPP_ERROR_LABEL[key] ?? WHATSAPP_ERROR_LABEL.send_failed)
     }
   }
