@@ -13,7 +13,7 @@ interface ComprobanteCfdiFieldProps {
   onComprobanteChange: (v: Pick<ComprobanteCfdi, 'comprobante_path' | 'comprobante_iv' | 'comprobante_salt' | 'comprobante_mime'>) => void
 }
 
-/** Folio del ticket/CFDI + foto o PDF cifrado del comprobante, para validar ante el SAT. */
+/** Folio del ticket/CFDI + foto, PDF o Excel cifrado del comprobante, para validar ante el SAT. */
 export default function ComprobanteCfdiField({
   folio,
   onFolioChange,
@@ -79,7 +79,7 @@ export default function ComprobanteCfdiField({
       <input
         ref={inputRef}
         type="file"
-        accept="image/jpeg,image/png,image/webp,application/pdf"
+        accept="image/jpeg,image/png,image/webp,application/pdf,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,.xls,.xlsx"
         className="hidden"
         onChange={(e) => {
           const file = e.target.files?.[0]
