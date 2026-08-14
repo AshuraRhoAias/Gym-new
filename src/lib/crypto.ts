@@ -9,6 +9,22 @@ export interface CipherPayload {
 /** Prefijo para distinguir un valor cifrado (JSON) de texto plano heredado. */
 const CIPHER_PREFIX = 'enc1:'
 
+/**
+ * Convierte bytes a base64 en bloques: `btoa(String.fromCharCode(...bytes))`
+ * revienta con "Maximum call stack size exceeded" en archivos grandes (el
+ * spread operator pasa cada byte como argumento de función, y los motores JS
+ * limitan cuántos argumentos aceptan de una vez). Procesar en bloques evita
+ * ese límite sin importar el tamaño del archivo.
+ */
+export function bytesToBase64(bytes: Uint8Array): string {
+  const CHUNK_SIZE = 0x8000
+  let binary = ''
+  for (let i = 0; i < bytes.length; i += CHUNK_SIZE) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + CHUNK_SIZE))
+  }
+  return btoa(binary)
+}
+
 function isCipherPayload(value: unknown): value is CipherPayload {
   return (
     !!value &&
@@ -51,7 +67,7 @@ export async function decryptText(stored: string | null): Promise<string> {
 }
 
 export async function encryptBytes(data: Uint8Array): Promise<CipherPayload> {
-  const base64 = btoa(String.fromCharCode(...data))
+  const base64 = bytesToBase64(data)
   return invoke<CipherPayload>({ action: 'encrypt-bytes', data: base64 })
 }
 
@@ -71,7 +87,7 @@ export async function abrirComprobante(
   const { data, error } = await supabase.storage.from(bucket).download(comprobante.comprobante_path)
   if (error || !data) throw error ?? new Error('No se encontró el comprobante')
   const cipherBytes = new Uint8Array(await data.arrayBuffer())
-  const cipherB64 = btoa(String.fromCharCode(...cipherBytes))
+  const cipherB64 = bytesToBase64(cipherBytes)
   const plainBytes = await decryptBytes({ c: cipherB64, iv: comprobante.comprobante_iv, s: comprobante.comprobante_salt })
   const blob = new Blob([plainBytes.buffer as ArrayBuffer], {
     type: comprobante.comprobante_mime || 'application/octet-stream',

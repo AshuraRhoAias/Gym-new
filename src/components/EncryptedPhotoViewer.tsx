@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { ImageOff, Loader2 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
-import { decryptBytes } from '../lib/crypto'
+import { decryptBytes, bytesToBase64 } from '../lib/crypto'
 
 interface EncryptedPhotoViewerProps {
   path: string
@@ -21,7 +21,7 @@ export default function EncryptedPhotoViewer({ path, iv, salt }: EncryptedPhotoV
       const { data, error: dlErr } = await supabase.storage.from('fotos').download(path)
       if (dlErr || !data) throw dlErr ?? new Error('No se encontró la foto')
       const cipherBytes = new Uint8Array(await data.arrayBuffer())
-      const cipherB64 = btoa(String.fromCharCode(...cipherBytes))
+      const cipherB64 = bytesToBase64(cipherBytes)
       const plainBytes = await decryptBytes({ c: cipherB64, iv, s: salt })
       const blob = new Blob([plainBytes.buffer as ArrayBuffer])
       setUrl(URL.createObjectURL(blob))
