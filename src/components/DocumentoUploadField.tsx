@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import { CheckCircle2, Loader2, Paperclip, Eye, ScanLine } from 'lucide-react'
 import { supabase } from '../lib/supabase'
-import { encryptBytes, decryptBytes } from '../lib/crypto'
+import { encryptBytes, decryptBytes, bytesToBase64 } from '../lib/crypto'
 import { useAuth } from '../context/AuthContext'
 import CameraCaptureModal from './CameraCaptureModal'
 import type { DocumentoArchivo } from '../types/database'
@@ -96,7 +96,7 @@ export default function DocumentoUploadField({
       const { data, error: dlErr } = await supabase.storage.from(BUCKET).download(archivo.file_path)
       if (dlErr || !data) throw dlErr ?? new Error('No se encontró el archivo')
       const cipherBytes = new Uint8Array(await data.arrayBuffer())
-      const cipherB64 = btoa(String.fromCharCode(...cipherBytes))
+      const cipherB64 = bytesToBase64(cipherBytes)
       const plainBytes = await decryptBytes({ c: cipherB64, iv: archivo.file_iv, s: archivo.file_salt })
       const blob = new Blob([plainBytes.buffer as ArrayBuffer], { type: archivo.mime_type })
       setViewUrl(URL.createObjectURL(blob))
