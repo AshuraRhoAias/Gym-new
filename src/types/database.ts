@@ -246,6 +246,7 @@ export interface AlcaldiaTicket {
 export type CategoriaGasto =
   | 'papeleria'
   | 'limpieza'
+  | 'insumos'
   | 'internet'
   | 'mantenimiento'
   | 'renta_equipo'
@@ -263,6 +264,7 @@ export type CategoriaGasto =
 export const CATEGORIA_GASTO_LABEL: Record<CategoriaGasto, string> = {
   papeleria: 'Papelería y oficina',
   limpieza: 'Limpieza',
+  insumos: 'Insumos',
   internet: 'Internet y telefonía',
   mantenimiento: 'Mantenimiento y reparaciones',
   renta_equipo: 'Renta (espacio/equipo)',
