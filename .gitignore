@@ -31,3 +31,10 @@ whatsapp-service/auth/*
 *.sw?
 .vercel
 .env*
+!.env.example
+!perf-tests/.env.example
+!perf-tests/.env.local.example
+
+# Estado local de `supabase start` (Docker) — nunca se versiona
+supabase/.temp
+supabase/.branches

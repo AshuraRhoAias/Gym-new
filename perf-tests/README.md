@@ -6,28 +6,43 @@ concurrentes y archivos grandes. No es un test suite de CI (no corre
 automático en cada PR) — son scripts para correr a mano cuando quieras
 diagnosticar o justificar una optimización.
 
-> ⚠️ **Importante**: la mayoría de estas pruebas hablan con el proyecto de
-> Supabase de **producción** (`gymtech`, el mismo que usa la app real) —
-> no hay un ambiente de staging separado en este repo. Las de solo lectura
-> son de bajo riesgo; las que **escriben** datos (01 y 10) exigen la
-> variable `PERF_TEST_CONFIRM=I_UNDERSTAND` a propósito, marcan todo lo que
-> insertan y traen su propia limpieza (`cleanup.mjs`). Aun así, mejor
-> correrlas fuera de horario de uso real, y revisar `cleanup.mjs` después.
+> ✅ **Corren contra una base de datos de PRUEBA**, no contra producción.
+> Usan [Supabase local](https://supabase.com/docs/guides/local-development)
+> (Postgres + Auth + Storage + Edge Functions en Docker, en tu propia
+> máquina) con el mismo esquema que producción, gracias a los migrations en
+> `supabase/migrations/`. Cero riesgo para los datos reales del gimnasio, y
+> sin costo — puedes correr las 10 pruebas (incluidas las que escriben o
+> tronarían límites) sin preocuparte por nada.
 
-## Requisitos
+## Setup (una sola vez)
 
-1. `npm install` ya corrido en la raíz del repo (usa `@supabase/supabase-js`
-   de `node_modules` de la raíz — no tiene `package.json` propio).
-2. Un `.env` en la raíz del repo con `VITE_SUPABASE_URL` y
-   `VITE_SUPABASE_PUBLISHABLE_KEY` (el mismo que usa la app).
-3. Para las pruebas marcadas 🔐 abajo: una **cuenta de prueba dedicada**
-   (rol `editor` o `admin` en la tabla `profiles`) — nunca uses tu cuenta
-   personal ni una de superadmin real. Exporta:
+1. Ten [Docker](https://www.docker.com/) corriendo.
+2. Desde la raíz del repo, levanta el stack local de Supabase (usa
+   `supabase/migrations/` + `supabase/functions/` de este mismo repo):
    ```bash
-   export PERF_TEST_EMAIL=perf-tests@example.com
-   export PERF_TEST_PASSWORD=...
+   npx supabase start
    ```
-   Ver `.env.example` para más detalle.
+   La primera vez descarga las imágenes de Docker (Postgres, Auth, Storage,
+   Studio, Edge Runtime...) — tarda unos minutos. Cuando termina, imprime las
+   URLs y llaves locales (siempre las mismas si no tocas `supabase/config.toml`).
+3. Copia las credenciales de prueba:
+   ```bash
+   cp perf-tests/.env.local.example perf-tests/.env.local
+   ```
+4. Crea la cuenta de prueba (rol `admin`) en la base local:
+   ```bash
+   node perf-tests/setup-local-db.mjs
+   ```
+
+Con eso, **todas** las pruebas de esta carpeta ya apuntan a local
+automáticamente (`perf-tests/.env.local` tiene prioridad sobre el `.env` de
+la raíz — ver `lib/env.mjs`), sin exportar nada más.
+
+Para apagar el stack local cuando termines: `npx supabase stop`. Para
+resetear la base local a un estado limpio (reaplica todos los migrations):
+`npx supabase db reset`.
+
+## Correr las pruebas
 
 Todas se corren con `node` desde la **raíz del repo** (para que resuelva
 `node_modules` correctamente):
@@ -40,18 +55,16 @@ node perf-tests/tests/04-client-filter-performance.mjs
 
 | # | Archivo | Qué mide | Escribe datos | Necesita auth |
 |---|---|---|:---:|:---:|
-| 01 | `01-bulk-insert-registros.mjs` | Throughput de inserción masiva en `registros` (temporada de inscripciones) | ⚠️ sí | 🔐 |
+| 01 | `01-bulk-insert-registros.mjs` | Throughput de inserción masiva en `registros` (temporada de inscripciones) | sí | 🔐 |
 | 02 | `02-paginated-read-throughput.mjs` | Latencia de lectura paginada conforme crece el offset | no | 🔐 |
 | 03 | `03-concurrent-dashboard-reads.mjs` | Varios "usuarios" abriendo el Reporte a la vez | no | 🔐 |
 | 04 | `04-client-filter-performance.mjs` | Filtro de búsqueda en memoria (Whats/Gastos) con datasets grandes | no | no |
 | 05 | `05-report-aggregation-performance.mjs` | Agregación de totales del Reporte con años de histórico | no | no |
-| 06 | `06-crypto-vault-throughput.mjs` | Latencia/carga de la Edge Function de cifrado bajo concurrencia | no* | 🔐 |
+| 06 | `06-crypto-vault-throughput.mjs` | Latencia/carga de la Edge Function de cifrado bajo concurrencia | no | 🔐 |
 | 07 | `07-large-file-encryption-stress.mjs` | Reproduce el bug de "Maximum call stack size exceeded" y prueba el fix con archivos de hasta 100MB | no | no |
 | 08 | `08-whatsapp-service-status-load.mjs` | Carga sobre el servicio local de WhatsApp (`/status`, `/check`) | no | no |
 | 09 | `09-concurrent-auth-login.mjs` | Logins concurrentes contra Supabase Auth | no | 🔐 |
-| 10 | `10-storage-upload-download-throughput.mjs` | Subida/bajada de archivos grandes a Storage | ⚠️ sí (auto-limpia) | 🔐 |
-
-\* 06 no escribe en tablas, pero sí genera carga real sobre la Edge Function del proyecto.
+| 10 | `10-storage-upload-download-throughput.mjs` | Subida/bajada de archivos grandes a Storage | sí (auto-limpia) | 🔐 |
 
 Cada script imprime min/avg/p50/p95/p99/max de latencia, throughput y
 errores. Variables de entorno para ajustar tamaño/concurrencia están
@@ -61,24 +74,41 @@ si no las defines.
 
 ## Orden sugerido
 
-1. Empieza por las que no tocan red ni DB: **04, 05, 07** (seguras, rápidas,
-   sirven para afinar el frontend puro).
-2. Sigue con las de solo lectura contra Supabase: **02, 03**.
-3. Prueba el servicio local de WhatsApp: **08** (con `whatsapp-service`
-   corriendo — `npm run dev` desde la raíz ya lo levanta).
-4. Solo si de verdad necesitas medir escritura/Storage/auth, y estás
-   consciente de que es contra producción: **01, 06, 09, 10** — y corre
-   `node perf-tests/cleanup.mjs` después de 01.
+1. Empieza por las que no tocan red ni DB: **04, 05, 07** (no necesitan
+   Supabase local corriendo, son instantáneas).
+2. Con `supabase start` + `setup-local-db.mjs` ya hechos, el resto (**01,
+   02, 03, 06, 08, 09, 10**) corren sin fricción — no piden confirmación
+   extra porque `perf-tests/.env.local.example` ya trae
+   `PERF_TEST_CONFIRM=I_UNDERSTAND`.
+3. `08` además necesita `whatsapp-service` corriendo (`npm run dev` desde
+   la raíz ya lo levanta).
+
+Después de correr `01` puedes limpiar los datos sintéticos con
+`node perf-tests/cleanup.mjs`, aunque contra la base local también puedes
+simplemente `npx supabase db reset` para empezar de cero.
+
+## ¿Y si de verdad necesito medir contra producción?
+
+Se puede — usando el `.env` normal de la raíz (sin `perf-tests/.env.local`)
+en vez del local. Las pruebas que escriben datos (01, 10) exigen entonces
+`PERF_TEST_CONFIRM=I_UNDERSTAND` a propósito, marcan todo lo insertado con
+un tag identificable y **no lo hacen por defecto**: hace falta que borres o
+no tengas `perf-tests/.env.local`, y definas `PERF_TEST_EMAIL`/
+`PERF_TEST_PASSWORD` de una cuenta de prueba dedicada (nunca tu cuenta
+personal ni una de superadmin real) contra el proyecto real. Solo tiene
+sentido si necesitas medir contra el volumen de datos real del gimnasio;
+para todo lo demás, usa Supabase local.
 
 ## Limpieza
 
 ```bash
-PERF_TEST_EMAIL=... PERF_TEST_PASSWORD=... node perf-tests/cleanup.mjs
+node perf-tests/cleanup.mjs
 ```
 
 Borra todo lo insertado por `01` (registros con
 `atendido_por = "perf-test-suite"`) y cualquier archivo que haya quedado
-bajo `perf-test/` en Storage (por si `10` no pudo autolimpiarse).
+bajo `perf-test/` en Storage (por si `10` no pudo autolimpiarse). Usa las
+credenciales de `perf-tests/.env.local` si existe, si no las de producción.
 
 ## ¿Por qué no hay un test runner tipo Jest/Vitest?
 
