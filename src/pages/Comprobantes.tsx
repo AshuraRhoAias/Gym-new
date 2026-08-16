@@ -13,11 +13,11 @@ import type { Registro } from '../types/database'
  * que ese dato no se imprime.
  */
 const CAMPOS = {
-  nombreUsuario: { top: '40.5%', left: '12.6%', width: '79.5%', fontSize: '2.3cqw' },
-  fecha: { top: '53.6%', left: '12.3%', width: '19.9%', fontSize: '1.7cqw' },
-  mes: { top: '53.6%', left: '43.3%', width: '17.9%', fontSize: '1.7cqw' },
-  anio: { top: '53.6%', left: '72.3%', width: '20.4%', fontSize: '1.7cqw' },
-  folio: { top: '26.9%', left: '83.6%', width: '11.7%', fontSize: '1.9cqw' },
+  nombreUsuario: { top: '40.5%', left: '14.6%', width: '77.5%', fontSize: '2.3cqw' },
+  fecha: { top: '53.6%', left: '14.3%', width: '17.9%', fontSize: '1.7cqw' },
+  mes: { top: '53.6%', left: '45.3%', width: '15.9%', fontSize: '1.7cqw' },
+  anio: { top: '53.6%', left: '74.3%', width: '18.4%', fontSize: '1.7cqw' },
+  folio: { top: '26.9%', left: '85.6%', width: '9.7%', fontSize: '1.9cqw' },
 } as const
 
 export default function Comprobantes() {
