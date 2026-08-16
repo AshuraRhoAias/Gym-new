@@ -2,33 +2,30 @@ import { useMemo, useState } from 'react'
 import { FileText, Printer, Search, X } from 'lucide-react'
 import { usePeriod } from '../context/PeriodContext'
 import { usePeriodRegistros } from '../hooks/usePeriodRegistros'
-import { useAuth } from '../context/AuthContext'
 import PeriodSelector from '../components/PeriodSelector'
 import type { Registro } from '../types/database'
 
 /**
- * Posiciones (en % del ancho/alto de la imagen) de cada campo sobre la
- * plantilla `/comprobante-pago.png`. Son estimadas a ojo a partir del
- * diseño — si al probar con la imagen real se ven corridas, ajusta estos
- * números (todo lo demás del componente no depende de ellos).
+ * Posiciones (en % del ancho/alto de la imagen, 1535×1024) de cada campo
+ * sobre la plantilla `/comprobante-pago.png`, medidas contra los recuadros
+ * reales de la plantilla. La plantilla final no tiene un recuadro para
+ * "quien realiza el recibo" (se simplificó respecto al primer boceto), así
+ * que ese dato no se imprime.
  */
 const CAMPOS = {
-  quienRealiza: { top: '35.2%', left: '12.5%', width: '48%' },
-  nombreUsuario: { top: '46.3%', left: '13%', width: '80%' },
-  fecha: { top: '56.8%', left: '13%', width: '17%' },
-  mes: { top: '56.8%', left: '44.5%', width: '17%' },
-  anio: { top: '56.8%', left: '74.5%', width: '17%' },
-  folio: { top: '29.8%', left: '86.5%', width: '8.5%' },
+  nombreUsuario: { top: '40.5%', left: '12.6%', width: '79.5%', fontSize: '2.3cqw' },
+  fecha: { top: '53.6%', left: '12.3%', width: '19.9%', fontSize: '1.7cqw' },
+  mes: { top: '53.6%', left: '43.3%', width: '17.9%', fontSize: '1.7cqw' },
+  anio: { top: '53.6%', left: '72.3%', width: '20.4%', fontSize: '1.7cqw' },
+  folio: { top: '26.9%', left: '83.6%', width: '11.7%', fontSize: '1.9cqw' },
 } as const
 
 export default function Comprobantes() {
   const { mes, anio } = usePeriod()
-  const { username } = useAuth()
   // Siempre solo los que tienen folio, sin importar el toggle global de privacidad.
   const { data, loading } = usePeriodRegistros(mes, anio, true)
   const [search, setSearch] = useState('')
   const [imprimiendo, setImprimiendo] = useState<Registro | null>(null)
-  const [quienRealiza, setQuienRealiza] = useState('')
   const [fecha, setFecha] = useState('')
 
   const filtered = useMemo(() => {
@@ -39,7 +36,6 @@ export default function Comprobantes() {
 
   const abrirImpresion = (r: Registro) => {
     setImprimiendo(r)
-    setQuienRealiza(r.atendido_por || username || '')
     setFecha(new Date().toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' }))
   }
 
@@ -121,27 +117,15 @@ export default function Comprobantes() {
                   <X size={18} />
                 </button>
               </div>
-              <p className="text-xs text-gray-500">
-                Puedes ajustar el nombre de quien atiende y la fecha antes de imprimir.
-              </p>
-              <div className="grid grid-cols-2 gap-3">
-                <label className="flex flex-col gap-1 text-xs text-gray-400">
-                  Quien realiza el recibo
-                  <input
-                    value={quienRealiza}
-                    onChange={(e) => setQuienRealiza(e.target.value)}
-                    className="bg-surface-2 border border-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-accent"
-                  />
-                </label>
-                <label className="flex flex-col gap-1 text-xs text-gray-400">
-                  Fecha de elaboración
-                  <input
-                    value={fecha}
-                    onChange={(e) => setFecha(e.target.value)}
-                    className="bg-surface-2 border border-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-accent"
-                  />
-                </label>
-              </div>
+              <p className="text-xs text-gray-500">Puedes ajustar la fecha antes de imprimir.</p>
+              <label className="flex flex-col gap-1 text-xs text-gray-400 max-w-xs">
+                Fecha de elaboración
+                <input
+                  value={fecha}
+                  onChange={(e) => setFecha(e.target.value)}
+                  className="bg-surface-2 border border-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-accent"
+                />
+              </label>
               <button
                 type="button"
                 onClick={() => window.print()}
@@ -155,38 +139,37 @@ export default function Comprobantes() {
             <div className="relative w-full bg-white rounded-lg overflow-hidden [container-type:inline-size]">
               <img src="/comprobante-pago.png" alt="Comprobante de pago" className="w-full h-auto block" />
               <span
-                className="absolute text-black font-medium text-[3.2cqw]"
-                style={{ top: CAMPOS.quienRealiza.top, left: CAMPOS.quienRealiza.left, width: CAMPOS.quienRealiza.width }}
-              >
-                {quienRealiza}
-              </span>
-              <span
-                className="absolute text-black font-medium text-[3.2cqw]"
-                style={{ top: CAMPOS.nombreUsuario.top, left: CAMPOS.nombreUsuario.left, width: CAMPOS.nombreUsuario.width }}
+                className="absolute text-black font-medium leading-tight"
+                style={{
+                  top: CAMPOS.nombreUsuario.top,
+                  left: CAMPOS.nombreUsuario.left,
+                  width: CAMPOS.nombreUsuario.width,
+                  fontSize: CAMPOS.nombreUsuario.fontSize,
+                }}
               >
                 {imprimiendo.nombre}
               </span>
               <span
-                className="absolute text-black font-medium text-[3.2cqw]"
-                style={{ top: CAMPOS.fecha.top, left: CAMPOS.fecha.left, width: CAMPOS.fecha.width }}
+                className="absolute text-black font-medium leading-tight"
+                style={{ top: CAMPOS.fecha.top, left: CAMPOS.fecha.left, width: CAMPOS.fecha.width, fontSize: CAMPOS.fecha.fontSize }}
               >
                 {fecha}
               </span>
               <span
-                className="absolute text-black font-medium text-[3.2cqw]"
-                style={{ top: CAMPOS.mes.top, left: CAMPOS.mes.left, width: CAMPOS.mes.width }}
+                className="absolute text-black font-medium leading-tight"
+                style={{ top: CAMPOS.mes.top, left: CAMPOS.mes.left, width: CAMPOS.mes.width, fontSize: CAMPOS.mes.fontSize }}
               >
                 {imprimiendo.mes}
               </span>
               <span
-                className="absolute text-black font-medium text-[3.2cqw]"
-                style={{ top: CAMPOS.anio.top, left: CAMPOS.anio.left, width: CAMPOS.anio.width }}
+                className="absolute text-black font-medium leading-tight"
+                style={{ top: CAMPOS.anio.top, left: CAMPOS.anio.left, width: CAMPOS.anio.width, fontSize: CAMPOS.anio.fontSize }}
               >
                 {imprimiendo.anio}
               </span>
               <span
-                className="absolute text-black font-medium text-[3.2cqw]"
-                style={{ top: CAMPOS.folio.top, left: CAMPOS.folio.left, width: CAMPOS.folio.width }}
+                className="absolute text-black font-medium leading-tight"
+                style={{ top: CAMPOS.folio.top, left: CAMPOS.folio.left, width: CAMPOS.folio.width, fontSize: CAMPOS.folio.fontSize }}
               >
                 {imprimiendo.folio}
               </span>
