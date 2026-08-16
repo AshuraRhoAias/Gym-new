@@ -2,30 +2,32 @@ import { useMemo, useState } from 'react'
 import { FileText, Printer, Search, X } from 'lucide-react'
 import { usePeriod } from '../context/PeriodContext'
 import { usePeriodRegistros } from '../hooks/usePeriodRegistros'
+import { useAuth } from '../context/AuthContext'
 import PeriodSelector from '../components/PeriodSelector'
 import type { Registro } from '../types/database'
 
 /**
  * Posiciones (en % del ancho/alto de la imagen, 1535×1024) de cada campo
- * sobre la plantilla `/comprobante-pago.png`, medidas contra los recuadros
- * reales de la plantilla. La plantilla final no tiene un recuadro para
- * "quien realiza el recibo" (se simplificó respecto al primer boceto), así
- * que ese dato no se imprime.
+ * sobre la plantilla `/comprobante-pago.png`, medidas con una cuadrícula de
+ * referencia contra los recuadros reales de la plantilla.
  */
 const CAMPOS = {
-  nombreUsuario: { top: '40.5%', left: '14.6%', width: '77.5%', fontSize: '2.3cqw' },
-  fecha: { top: '53.6%', left: '14.3%', width: '17.9%', fontSize: '1.7cqw' },
-  mes: { top: '53.6%', left: '45.3%', width: '15.9%', fontSize: '1.7cqw' },
-  anio: { top: '53.6%', left: '74.3%', width: '18.4%', fontSize: '1.7cqw' },
-  folio: { top: '26.9%', left: '85.6%', width: '9.7%', fontSize: '1.9cqw' },
+  quienRealiza: { top: '35.9%', left: '12%', width: '35%', fontSize: '1.7cqw' },
+  nombreUsuario: { top: '47%', left: '13.5%', width: '78.5%', fontSize: '2.3cqw' },
+  fecha: { top: '56.4%', left: '13%', width: '18.5%', fontSize: '1.7cqw' },
+  mes: { top: '56.4%', left: '44.5%', width: '16.5%', fontSize: '1.7cqw' },
+  anio: { top: '56.4%', left: '73.5%', width: '19%', fontSize: '1.7cqw' },
+  folio: { top: '29.9%', left: '87%', width: '7.5%', fontSize: '1.9cqw' },
 } as const
 
 export default function Comprobantes() {
   const { mes, anio } = usePeriod()
+  const { username } = useAuth()
   // Siempre solo los que tienen folio, sin importar el toggle global de privacidad.
   const { data, loading } = usePeriodRegistros(mes, anio, true)
   const [search, setSearch] = useState('')
   const [imprimiendo, setImprimiendo] = useState<Registro | null>(null)
+  const [quienRealiza, setQuienRealiza] = useState('')
   const [fecha, setFecha] = useState('')
 
   const filtered = useMemo(() => {
@@ -36,6 +38,7 @@ export default function Comprobantes() {
 
   const abrirImpresion = (r: Registro) => {
     setImprimiendo(r)
+    setQuienRealiza(r.atendido_por || username || '')
     setFecha(new Date().toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' }))
   }
 
@@ -117,15 +120,27 @@ export default function Comprobantes() {
                   <X size={18} />
                 </button>
               </div>
-              <p className="text-xs text-gray-500">Puedes ajustar la fecha antes de imprimir.</p>
-              <label className="flex flex-col gap-1 text-xs text-gray-400 max-w-xs">
-                Fecha de elaboración
-                <input
-                  value={fecha}
-                  onChange={(e) => setFecha(e.target.value)}
-                  className="bg-surface-2 border border-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-accent"
-                />
-              </label>
+              <p className="text-xs text-gray-500">
+                Puedes ajustar el nombre de quien atiende y la fecha antes de imprimir.
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                <label className="flex flex-col gap-1 text-xs text-gray-400">
+                  Quien realiza el recibo
+                  <input
+                    value={quienRealiza}
+                    onChange={(e) => setQuienRealiza(e.target.value)}
+                    className="bg-surface-2 border border-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-accent"
+                  />
+                </label>
+                <label className="flex flex-col gap-1 text-xs text-gray-400">
+                  Fecha de elaboración
+                  <input
+                    value={fecha}
+                    onChange={(e) => setFecha(e.target.value)}
+                    className="bg-surface-2 border border-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-accent"
+                  />
+                </label>
+              </div>
               <button
                 type="button"
                 onClick={() => window.print()}
@@ -138,6 +153,17 @@ export default function Comprobantes() {
             {/* Comprobante: se ve en la vista previa y es lo único que queda visible al imprimir. */}
             <div className="relative w-full bg-white rounded-lg overflow-hidden [container-type:inline-size]">
               <img src="/comprobante-pago.png" alt="Comprobante de pago" className="w-full h-auto block" />
+              <span
+                className="absolute text-black font-medium leading-tight"
+                style={{
+                  top: CAMPOS.quienRealiza.top,
+                  left: CAMPOS.quienRealiza.left,
+                  width: CAMPOS.quienRealiza.width,
+                  fontSize: CAMPOS.quienRealiza.fontSize,
+                }}
+              >
+                {quienRealiza}
+              </span>
               <span
                 className="absolute text-black font-medium leading-tight"
                 style={{
