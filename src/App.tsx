@@ -25,6 +25,7 @@ const Auditoria = lazy(() => import('./pages/Auditoria'))
 const Nomina = lazy(() => import('./pages/Nomina'))
 const Finanzas = lazy(() => import('./pages/Finanzas'))
 const Whats = lazy(() => import('./pages/Whats'))
+const Comprobantes = lazy(() => import('./pages/Comprobantes'))
 const ComingSoon = lazy(() => import('./pages/ComingSoon'))
 
 function PageFallback() {
@@ -72,6 +73,7 @@ export default function App() {
                       <Route path="/nomina">{guarded(<Nomina />)}</Route>
                       <Route path="/finanzas">{guarded(<Finanzas />)}</Route>
                       <Route path="/whats">{guarded(<Whats />)}</Route>
+                      <Route path="/comprobantes">{guarded(<Comprobantes />)}</Route>
                       <Route>
                         <Suspense fallback={<PageFallback />}>
                           <ComingSoon title="Página no encontrada" />

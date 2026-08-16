@@ -27,7 +27,7 @@ export const canWriteRegistros = (role: Role | null) => role === 'superadmin' ||
  * Rutas visibles/permitidas por rol. Dashboard y "/" siempre están
  * permitidas para cualquier cuenta con sesión.
  */
-const EDITOR_ROUTES = ['/', '/inscripciones', '/renovaciones', '/scanner', '/reportes', '/completos', '/faltan']
+const EDITOR_ROUTES = ['/', '/inscripciones', '/renovaciones', '/scanner', '/reportes', '/completos', '/faltan', '/comprobantes']
 const VIEWER_ROUTES = ['/', '/enum']
 const MONEY_ROUTES = ['/registros-visitas', '/caja-visitas', '/payment-monitor', '/dia', '/enum', '/nomina', '/whats']
 /** Solo superadmin: gestión de cuentas. Nómina, Finanzas y Auditoría quedan
