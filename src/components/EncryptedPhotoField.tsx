@@ -1,7 +1,8 @@
 import { useRef, useState } from 'react'
-import { Camera, CheckCircle2, Loader2 } from 'lucide-react'
+import { Camera, CheckCircle2, Loader2, Paperclip } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { encryptBytes } from '../lib/crypto'
+import CameraCaptureModal from './CameraCaptureModal'
 
 export interface FotoRef {
   path: string
@@ -25,6 +26,7 @@ export default function EncryptedPhotoField({ value, onChange, label = 'credenci
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [camaraAbierta, setCamaraAbierta] = useState(false)
 
   const handleFile = async (file: File) => {
     setError(null)
@@ -60,36 +62,56 @@ export default function EncryptedPhotoField({ value, onChange, label = 'credenci
           if (file) handleFile(file)
         }}
       />
-      <button
-        type="button"
-        onClick={() => inputRef.current?.click()}
-        disabled={uploading}
-        className="w-24 h-24 border border-dashed border-border rounded-lg flex flex-col items-center justify-center gap-1 text-gray-500 hover:border-accent/50 overflow-hidden relative"
-      >
-        {previewUrl ? (
-          <img src={previewUrl} alt={`Foto de ${label}`} className="w-full h-full object-cover" />
-        ) : (
-          <>
-            <Camera size={18} />
-            <span className="text-[10px] text-center leading-tight px-1">Haz clic para subir {label}</span>
-          </>
-        )}
-        {uploading && (
-          <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
-            <Loader2 size={18} className="animate-spin text-white" />
-          </div>
-        )}
-        {value && !uploading && (
-          <div className="absolute bottom-0.5 right-0.5 bg-black/60 rounded-full p-0.5">
-            <CheckCircle2 size={14} className="text-accent" />
-          </div>
-        )}
-      </button>
+      <div className="flex items-start gap-2">
+        <button
+          type="button"
+          onClick={() => inputRef.current?.click()}
+          disabled={uploading}
+          className="w-24 h-24 border border-dashed border-border rounded-lg flex flex-col items-center justify-center gap-1 text-gray-500 hover:border-accent/50 overflow-hidden relative shrink-0"
+        >
+          {previewUrl ? (
+            <img src={previewUrl} alt={`Foto de ${label}`} className="w-full h-full object-cover" />
+          ) : (
+            <>
+              <Paperclip size={18} />
+              <span className="text-[10px] text-center leading-tight px-1">Haz clic para subir {label}</span>
+            </>
+          )}
+          {uploading && (
+            <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+              <Loader2 size={18} className="animate-spin text-white" />
+            </div>
+          )}
+          {value && !uploading && (
+            <div className="absolute bottom-0.5 right-0.5 bg-black/60 rounded-full p-0.5">
+              <CheckCircle2 size={14} className="text-accent" />
+            </div>
+          )}
+        </button>
+        <button
+          type="button"
+          onClick={() => setCamaraAbierta(true)}
+          disabled={uploading}
+          className="flex items-center gap-1 text-xs bg-surface-2 border border-border rounded-md px-2 py-1 text-gray-300 hover:border-accent/50 disabled:opacity-60"
+        >
+          <Camera size={13} /> Tomar foto
+        </button>
+      </div>
       <p className="text-[10px] text-gray-500 mt-1">Se cifra antes de subirse (AES-256-GCM)</p>
       {value?.uploadedAt && (
         <p className="text-[10px] text-gray-500">Subida: {new Date(value.uploadedAt).toLocaleString('es-MX')}</p>
       )}
       {error && <p className="text-xs text-danger mt-1">{error}</p>}
+      {camaraAbierta && (
+        <CameraCaptureModal
+          title={`Tomar foto: ${label}`}
+          onClose={() => setCamaraAbierta(false)}
+          onCapture={(file) => {
+            setCamaraAbierta(false)
+            handleFile(file)
+          }}
+        />
+      )}
     </div>
   )
 }
