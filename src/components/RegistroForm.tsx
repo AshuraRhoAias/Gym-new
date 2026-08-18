@@ -156,6 +156,26 @@ export default function RegistroForm({
         }
       : null,
   )
+  const [credencialFrente, setCredencialFrente] = useState<FotoRef | null>(
+    initial?.credencial_frente_path && initial.credencial_frente_iv && initial.credencial_frente_salt
+      ? {
+          path: initial.credencial_frente_path,
+          iv: initial.credencial_frente_iv,
+          salt: initial.credencial_frente_salt,
+          uploadedAt: initial.credencial_frente_subida_at ?? initial.created_at,
+        }
+      : null,
+  )
+  const [credencialReverso, setCredencialReverso] = useState<FotoRef | null>(
+    initial?.credencial_reverso_path && initial.credencial_reverso_iv && initial.credencial_reverso_salt
+      ? {
+          path: initial.credencial_reverso_path,
+          iv: initial.credencial_reverso_iv,
+          salt: initial.credencial_reverso_salt,
+          uploadedAt: initial.credencial_reverso_subida_at ?? initial.created_at,
+        }
+      : null,
+  )
   const [saving, setSaving] = useState(false)
   const [decrypting, setDecrypting] = useState(!!initial)
   const [error, setError] = useState<string | null>(null)
@@ -264,6 +284,14 @@ export default function RegistroForm({
       foto_iv: fotoRef?.iv ?? null,
       foto_salt: fotoRef?.salt ?? null,
       foto_subida_at: fotoRef?.uploadedAt ?? null,
+      credencial_frente_path: credencialFrente?.path ?? null,
+      credencial_frente_iv: credencialFrente?.iv ?? null,
+      credencial_frente_salt: credencialFrente?.salt ?? null,
+      credencial_frente_subida_at: credencialFrente?.uploadedAt ?? null,
+      credencial_reverso_path: credencialReverso?.path ?? null,
+      credencial_reverso_iv: credencialReverso?.iv ?? null,
+      credencial_reverso_salt: credencialReverso?.salt ?? null,
+      credencial_reverso_subida_at: credencialReverso?.uploadedAt ?? null,
       atendido_por: initial?.atendido_por ?? username,
     }
 
@@ -655,8 +683,31 @@ export default function RegistroForm({
       )}
 
       <div>
-        <label className="block text-xs text-gray-400 mb-1.5">Credencial</label>
-        <EncryptedPhotoField value={fotoRef} onChange={setFotoRef} label="credencial" />
+        <label className="block text-xs text-gray-400 mb-2">Credencial</label>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div>
+            <label className="block text-[11px] text-gray-500 mb-1.5">Foto con cámara</label>
+            <EncryptedPhotoField value={fotoRef} onChange={setFotoRef} label="foto" allowCamera />
+          </div>
+          <div>
+            <label className="block text-[11px] text-gray-500 mb-1.5">Imagen dispositivo (frente)</label>
+            <EncryptedPhotoField
+              value={credencialFrente}
+              onChange={setCredencialFrente}
+              label="imagen del frente"
+              allowCamera={false}
+            />
+          </div>
+          <div>
+            <label className="block text-[11px] text-gray-500 mb-1.5">Imagen dispositivo (reverso)</label>
+            <EncryptedPhotoField
+              value={credencialReverso}
+              onChange={setCredencialReverso}
+              label="imagen del reverso"
+              allowCamera={false}
+            />
+          </div>
+        </div>
       </div>
 
       {error && (

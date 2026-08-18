@@ -208,10 +208,16 @@ export default function Dashboard() {
                     <StatusBadge status={r.estatus} />
                   </td>
                   <td className="px-4 py-3">
-                    {r.foto_path ? (
+                    {r.foto_path || r.credencial_frente_path || r.credencial_reverso_path ? (
                       <span
                         className="text-xs px-2 py-1 rounded-md font-medium bg-accent/15 text-accent"
-                        title={r.foto_subida_at ? `Subida: ${new Date(r.foto_subida_at).toLocaleString('es-MX')}` : undefined}
+                        title={[
+                          r.foto_subida_at && `Foto: ${new Date(r.foto_subida_at).toLocaleString('es-MX')}`,
+                          r.credencial_frente_subida_at && `Frente: ${new Date(r.credencial_frente_subida_at).toLocaleString('es-MX')}`,
+                          r.credencial_reverso_subida_at && `Reverso: ${new Date(r.credencial_reverso_subida_at).toLocaleString('es-MX')}`,
+                        ]
+                          .filter(Boolean)
+                          .join(' · ') || undefined}
                       >
                         Credencial entregada
                       </span>
@@ -344,15 +350,42 @@ export default function Dashboard() {
               )}
             </div>
           )}
-          {detail.foto_path && detail.foto_iv && detail.foto_salt && !(hideSinFolio && !tieneFolio(detail.folio)) && (
-            <div className="mt-4 pt-4 border-t border-border">
-              <span className="text-gray-500 block text-xs mb-2">Credencial (cifrada):</span>
-              <EncryptedPhotoViewer
-                path={detail.foto_path}
-                iv={detail.foto_iv}
-                salt={detail.foto_salt}
-                uploadedAt={detail.foto_subida_at}
-              />
+          {!(hideSinFolio && !tieneFolio(detail.folio)) &&
+            (detail.foto_path || detail.credencial_frente_path || detail.credencial_reverso_path) && (
+            <div className="mt-4 pt-4 border-t border-border flex flex-wrap gap-6">
+              {detail.foto_path && detail.foto_iv && detail.foto_salt && (
+                <div>
+                  <span className="text-gray-500 block text-xs mb-2">Foto con cámara (cifrada):</span>
+                  <EncryptedPhotoViewer
+                    path={detail.foto_path}
+                    iv={detail.foto_iv}
+                    salt={detail.foto_salt}
+                    uploadedAt={detail.foto_subida_at}
+                  />
+                </div>
+              )}
+              {detail.credencial_frente_path && detail.credencial_frente_iv && detail.credencial_frente_salt && (
+                <div>
+                  <span className="text-gray-500 block text-xs mb-2">Imagen frente (cifrada):</span>
+                  <EncryptedPhotoViewer
+                    path={detail.credencial_frente_path}
+                    iv={detail.credencial_frente_iv}
+                    salt={detail.credencial_frente_salt}
+                    uploadedAt={detail.credencial_frente_subida_at}
+                  />
+                </div>
+              )}
+              {detail.credencial_reverso_path && detail.credencial_reverso_iv && detail.credencial_reverso_salt && (
+                <div>
+                  <span className="text-gray-500 block text-xs mb-2">Imagen reverso (cifrada):</span>
+                  <EncryptedPhotoViewer
+                    path={detail.credencial_reverso_path}
+                    iv={detail.credencial_reverso_iv}
+                    salt={detail.credencial_reverso_salt}
+                    uploadedAt={detail.credencial_reverso_subida_at}
+                  />
+                </div>
+              )}
             </div>
           )}
         </Modal>

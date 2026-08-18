@@ -72,8 +72,18 @@ export interface Registro {
   foto_path: string | null
   foto_iv: string | null
   foto_salt: string | null
-  /** Fecha y hora en que se subió la credencial (foto_path). */
+  /** Fecha y hora en que se subió la foto con cámara (foto_path). */
   foto_subida_at: string | null
+  /** Imagen del frente de la identificación/dispositivo (cifrada, subida desde archivo). */
+  credencial_frente_path: string | null
+  credencial_frente_iv: string | null
+  credencial_frente_salt: string | null
+  credencial_frente_subida_at: string | null
+  /** Imagen del reverso de la identificación/dispositivo (cifrada, subida desde archivo). */
+  credencial_reverso_path: string | null
+  credencial_reverso_iv: string | null
+  credencial_reverso_salt: string | null
+  credencial_reverso_subida_at: string | null
   created_at: string
   updated_at: string
 }
