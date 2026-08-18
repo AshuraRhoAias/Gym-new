@@ -148,7 +148,12 @@ export default function RegistroForm({
   const [archivosLoading, setArchivosLoading] = useState(!!initial)
   const [fotoRef, setFotoRef] = useState<FotoRef | null>(
     initial?.foto_path && initial.foto_iv && initial.foto_salt
-      ? { path: initial.foto_path, iv: initial.foto_iv, salt: initial.foto_salt }
+      ? {
+          path: initial.foto_path,
+          iv: initial.foto_iv,
+          salt: initial.foto_salt,
+          uploadedAt: initial.foto_subida_at ?? initial.created_at,
+        }
       : null,
   )
   const [saving, setSaving] = useState(false)
@@ -258,6 +263,7 @@ export default function RegistroForm({
       foto_path: fotoRef?.path ?? null,
       foto_iv: fotoRef?.iv ?? null,
       foto_salt: fotoRef?.salt ?? null,
+      foto_subida_at: fotoRef?.uploadedAt ?? null,
       atendido_por: initial?.atendido_por ?? username,
     }
 
@@ -649,8 +655,8 @@ export default function RegistroForm({
       )}
 
       <div>
-        <label className="block text-xs text-gray-400 mb-1.5">Foto del alumno</label>
-        <EncryptedPhotoField value={fotoRef} onChange={setFotoRef} />
+        <label className="block text-xs text-gray-400 mb-1.5">Credencial</label>
+        <EncryptedPhotoField value={fotoRef} onChange={setFotoRef} label="credencial" />
       </div>
 
       {error && (

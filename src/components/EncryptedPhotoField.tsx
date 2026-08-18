@@ -7,16 +7,20 @@ export interface FotoRef {
   path: string
   iv: string
   salt: string
+  /** Fecha/hora (ISO) en que se subió esta credencial. */
+  uploadedAt: string
 }
 
 interface EncryptedPhotoFieldProps {
   value: FotoRef | null
   onChange: (value: FotoRef | null) => void
+  /** Texto del botón/alt cuando no hay foto. Default: "credencial". */
+  label?: string
 }
 
 const BUCKET = 'fotos'
 
-export default function EncryptedPhotoField({ value, onChange }: EncryptedPhotoFieldProps) {
+export default function EncryptedPhotoField({ value, onChange, label = 'credencial' }: EncryptedPhotoFieldProps) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
@@ -35,9 +39,9 @@ export default function EncryptedPhotoField({ value, onChange }: EncryptedPhotoF
         contentType: 'application/octet-stream',
       })
       if (uploadErr) throw uploadErr
-      onChange({ path, iv, salt: s })
+      onChange({ path, iv, salt: s, uploadedAt: new Date().toISOString() })
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo subir la foto')
+      setError(err instanceof Error ? err.message : `No se pudo subir la ${label}`)
       onChange(null)
     } finally {
       setUploading(false)
@@ -63,11 +67,11 @@ export default function EncryptedPhotoField({ value, onChange }: EncryptedPhotoF
         className="w-24 h-24 border border-dashed border-border rounded-lg flex flex-col items-center justify-center gap-1 text-gray-500 hover:border-accent/50 overflow-hidden relative"
       >
         {previewUrl ? (
-          <img src={previewUrl} alt="Foto del alumno" className="w-full h-full object-cover" />
+          <img src={previewUrl} alt={`Foto de ${label}`} className="w-full h-full object-cover" />
         ) : (
           <>
             <Camera size={18} />
-            <span className="text-[10px] text-center leading-tight px-1">Haz clic para subir foto</span>
+            <span className="text-[10px] text-center leading-tight px-1">Haz clic para subir {label}</span>
           </>
         )}
         {uploading && (
@@ -82,6 +86,9 @@ export default function EncryptedPhotoField({ value, onChange }: EncryptedPhotoF
         )}
       </button>
       <p className="text-[10px] text-gray-500 mt-1">Se cifra antes de subirse (AES-256-GCM)</p>
+      {value?.uploadedAt && (
+        <p className="text-[10px] text-gray-500">Subida: {new Date(value.uploadedAt).toLocaleString('es-MX')}</p>
+      )}
       {error && <p className="text-xs text-danger mt-1">{error}</p>}
     </div>
   )
