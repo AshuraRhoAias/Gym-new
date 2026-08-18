@@ -17,11 +17,18 @@ interface EncryptedPhotoFieldProps {
   onChange: (value: FotoRef | null) => void
   /** Texto del botón/alt cuando no hay foto. Default: "credencial". */
   label?: string
+  /** Muestra el botón "Tomar foto" (cámara en vivo). Default: true. */
+  allowCamera?: boolean
 }
 
 const BUCKET = 'fotos'
 
-export default function EncryptedPhotoField({ value, onChange, label = 'credencial' }: EncryptedPhotoFieldProps) {
+export default function EncryptedPhotoField({
+  value,
+  onChange,
+  label = 'credencial',
+  allowCamera = true,
+}: EncryptedPhotoFieldProps) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
@@ -88,14 +95,16 @@ export default function EncryptedPhotoField({ value, onChange, label = 'credenci
             </div>
           )}
         </button>
-        <button
-          type="button"
-          onClick={() => setCamaraAbierta(true)}
-          disabled={uploading}
-          className="flex items-center gap-1 text-xs bg-surface-2 border border-border rounded-md px-2 py-1 text-gray-300 hover:border-accent/50 disabled:opacity-60"
-        >
-          <Camera size={13} /> Tomar foto
-        </button>
+        {allowCamera && (
+          <button
+            type="button"
+            onClick={() => setCamaraAbierta(true)}
+            disabled={uploading}
+            className="flex items-center gap-1 text-xs bg-surface-2 border border-border rounded-md px-2 py-1 text-gray-300 hover:border-accent/50 disabled:opacity-60"
+          >
+            <Camera size={13} /> Tomar foto
+          </button>
+        )}
       </div>
       <p className="text-[10px] text-gray-500 mt-1">Se cifra antes de subirse (AES-256-GCM)</p>
       {value?.uploadedAt && (
