@@ -7,9 +7,11 @@ interface EncryptedPhotoViewerProps {
   path: string
   iv: string
   salt: string
+  /** Fecha/hora (ISO) en que se subió, si se conoce. */
+  uploadedAt?: string | null
 }
 
-export default function EncryptedPhotoViewer({ path, iv, salt }: EncryptedPhotoViewerProps) {
+export default function EncryptedPhotoViewer({ path, iv, salt, uploadedAt }: EncryptedPhotoViewerProps) {
   const [url, setUrl] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -33,7 +35,14 @@ export default function EncryptedPhotoViewer({ path, iv, salt }: EncryptedPhotoV
   }
 
   if (url) {
-    return <img src={url} alt="Foto del alumno" className="w-32 h-32 object-cover rounded-lg border border-border" />
+    return (
+      <div className="flex flex-col items-start gap-1">
+        <img src={url} alt="Credencial del alumno" className="w-32 h-32 object-cover rounded-lg border border-border" />
+        {uploadedAt && (
+          <p className="text-xs text-gray-500">Subida: {new Date(uploadedAt).toLocaleString('es-MX')}</p>
+        )}
+      </div>
+    )
   }
 
   return (

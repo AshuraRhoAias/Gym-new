@@ -72,6 +72,8 @@ export interface Registro {
   foto_path: string | null
   foto_iv: string | null
   foto_salt: string | null
+  /** Fecha y hora en que se subió la credencial (foto_path). */
+  foto_subida_at: string | null
   created_at: string
   updated_at: string
 }

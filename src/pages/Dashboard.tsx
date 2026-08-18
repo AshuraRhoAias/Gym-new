@@ -175,6 +175,7 @@ export default function Dashboard() {
                 <th className="px-4 py-3 font-medium">Nombre</th>
                 <th className="px-4 py-3 font-medium">Folio</th>
                 <th className="px-4 py-3 font-medium">Estatus</th>
+                <th className="px-4 py-3 font-medium">Credencial</th>
                 <th className="px-4 py-3 font-medium">Forma de Pago</th>
                 <th className="px-4 py-3 font-medium">Horario</th>
                 <th className="px-4 py-3 font-medium">Atendido por</th>
@@ -185,14 +186,14 @@ export default function Dashboard() {
             <tbody>
               {loading && (
                 <tr>
-                  <td colSpan={8} className="px-4 py-8 text-center text-gray-500">
+                  <td colSpan={9} className="px-4 py-8 text-center text-gray-500">
                     Cargando…
                   </td>
                 </tr>
               )}
               {!loading && filtered.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="px-4 py-8 text-center text-gray-500">
+                  <td colSpan={9} className="px-4 py-8 text-center text-gray-500">
                     Sin registros para este periodo.
                   </td>
                 </tr>
@@ -205,6 +206,20 @@ export default function Dashboard() {
                   <td className="px-4 py-3 text-gray-300">{r.folio || '0'}</td>
                   <td className="px-4 py-3">
                     <StatusBadge status={r.estatus} />
+                  </td>
+                  <td className="px-4 py-3">
+                    {r.foto_path ? (
+                      <span
+                        className="text-xs px-2 py-1 rounded-md font-medium bg-accent/15 text-accent"
+                        title={r.foto_subida_at ? `Subida: ${new Date(r.foto_subida_at).toLocaleString('es-MX')}` : undefined}
+                      >
+                        Credencial entregada
+                      </span>
+                    ) : (
+                      <span className="text-xs px-2 py-1 rounded-md font-medium bg-gray-500/15 text-gray-400">
+                        Sin credencial
+                      </span>
+                    )}
                   </td>
                   <td className="px-4 py-3 text-gray-300">
                     {PAGO_LABEL[r.forma_pago]}
@@ -331,8 +346,13 @@ export default function Dashboard() {
           )}
           {detail.foto_path && detail.foto_iv && detail.foto_salt && !(hideSinFolio && !tieneFolio(detail.folio)) && (
             <div className="mt-4 pt-4 border-t border-border">
-              <span className="text-gray-500 block text-xs mb-2">Foto del alumno (cifrada):</span>
-              <EncryptedPhotoViewer path={detail.foto_path} iv={detail.foto_iv} salt={detail.foto_salt} />
+              <span className="text-gray-500 block text-xs mb-2">Credencial (cifrada):</span>
+              <EncryptedPhotoViewer
+                path={detail.foto_path}
+                iv={detail.foto_iv}
+                salt={detail.foto_salt}
+                uploadedAt={detail.foto_subida_at}
+              />
             </div>
           )}
         </Modal>

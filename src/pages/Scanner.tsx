@@ -209,6 +209,7 @@ export default function Scanner() {
                   path={scanResult.registro.foto_path}
                   iv={scanResult.registro.foto_iv}
                   salt={scanResult.registro.foto_salt}
+                  uploadedAt={scanResult.registro.foto_subida_at}
                 />
               )}
             </div>
