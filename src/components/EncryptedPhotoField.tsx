@@ -1,7 +1,8 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Camera, CheckCircle2, Loader2, Paperclip } from 'lucide-react'
 import { supabase } from '../lib/supabase'
-import { encryptBytes } from '../lib/crypto'
+import { encryptBytes, decryptBytes, bytesToBase64 } from '../lib/crypto'
+import { compressImage } from '../lib/image'
 import CameraCaptureModal from './CameraCaptureModal'
 
 export interface FotoRef {
@@ -32,15 +33,46 @@ export default function EncryptedPhotoField({
   const inputRef = useRef<HTMLInputElement>(null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
+  const [loadingPreview, setLoadingPreview] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [camaraAbierta, setCamaraAbierta] = useState(false)
+
+  // Si el campo llega con un valor ya existente (se está editando un
+  // registro) y todavía no hay preview local (no se acaba de subir nada en
+  // esta sesión), se descifra en segundo plano para mostrar la miniatura en
+  // vez de solo el ícono genérico.
+  useEffect(() => {
+    if (!value || previewUrl) return
+    let cancelled = false
+    setLoadingPreview(true)
+    ;(async () => {
+      try {
+        const { data, error: dlErr } = await supabase.storage.from(BUCKET).download(value.path)
+        if (dlErr || !data) throw dlErr ?? new Error('No se encontró el archivo')
+        const cipherBytes = new Uint8Array(await data.arrayBuffer())
+        const cipherB64 = bytesToBase64(cipherBytes)
+        const plainBytes = await decryptBytes({ c: cipherB64, iv: value.iv, s: value.salt })
+        const blob = new Blob([plainBytes.buffer as ArrayBuffer], { type: 'image/jpeg' })
+        if (!cancelled) setPreviewUrl(URL.createObjectURL(blob))
+      } catch {
+        // Silencioso: si no se puede descifrar el preview, se deja el ícono genérico.
+      } finally {
+        if (!cancelled) setLoadingPreview(false)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value?.path])
 
   const handleFile = async (file: File) => {
     setError(null)
     setUploading(true)
     setPreviewUrl(URL.createObjectURL(file))
     try {
-      const bytes = new Uint8Array(await file.arrayBuffer())
+      const comprimida = await compressImage(file)
+      const bytes = new Uint8Array(await comprimida.arrayBuffer())
       const { c, iv, s } = await encryptBytes(bytes)
       const cipherBytes = Uint8Array.from(atob(c), (ch) => ch.charCodeAt(0))
       const path = `${crypto.randomUUID()}.enc`
@@ -84,7 +116,7 @@ export default function EncryptedPhotoField({
               <span className="text-[10px] text-center leading-tight px-1">Haz clic para subir {label}</span>
             </>
           )}
-          {uploading && (
+          {(uploading || loadingPreview) && (
             <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
               <Loader2 size={18} className="animate-spin text-white" />
             </div>
@@ -106,7 +138,7 @@ export default function EncryptedPhotoField({
           </button>
         )}
       </div>
-      <p className="text-[10px] text-gray-500 mt-1">Se cifra antes de subirse (AES-256-GCM)</p>
+      <p className="text-[10px] text-gray-500 mt-1">Se comprime y cifra antes de subirse (AES-256-GCM)</p>
       {value?.uploadedAt && (
         <p className="text-[10px] text-gray-500">Subida: {new Date(value.uploadedAt).toLocaleString('es-MX')}</p>
       )}
